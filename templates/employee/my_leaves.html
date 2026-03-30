@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-10 space-y-10 relative">
+    
+    <!-- Background element -->
+    <div class="absolute top-10 right-40 w-96 h-96 bg-orange-200 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-pulse-soft z-0"></div>
+
+    <!-- Header & Stats -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 mb-12">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-amber-500 to-orange-500 tracking-tight pb-2">My Leaves</h1>
+            <p class="text-slate-500 font-medium text-lg mt-2">Manage your time-off and track your leave allowances.</p>
+        </div>
+        
+        <div class="relative glass-card rounded-[2rem] p-6 pr-10 flex items-center space-x-6 shrink-0 shadow-2xl shadow-orange-500/10 overflow-hidden border border-white/80 bg-white/40">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br from-orange-200 to-amber-100 rounded-full opacity-50 blur-xl"></div>
+            <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-inner relative z-10 shadow-lg shadow-orange-500/40">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            </div>
+            <div class="relative z-10">
+                <p class="text-[10px] font-black uppercase text-orange-600 tracking-[0.2em] mb-1">Available Leaves</p>
+                <div class="flex items-baseline space-x-2">
+                    <p class="text-4xl font-black text-slate-800 tracking-tighter">{{ leave_balance }}</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Days</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-10 relative z-10">
+        
+        <!-- Leave Form -->
+        <div class="xl:col-span-4">
+            <div class="glass-card rounded-[2.5rem] p-8 shadow-2xl shadow-slate-200/50 sticky top-24 border border-white/80 bg-white/40">
+                <div class="flex items-center mb-8">
+                    <div class="w-2 h-8 rounded-full bg-gradient-to-b from-orange-500 to-amber-400 mr-4"></div>
+                    <h3 class="text-xl font-black text-slate-900">Apply for Leave</h3>
+                </div>
+
+                <form method="POST" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Leave Category</label>
+                        <div class="relative">
+                            <select name="leave_type" required class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 transition-all appearance-none cursor-pointer">
+                                <option value="sick">Medical & Sick Leave</option>
+                                <option value="casual">Casual Leave</option>
+                                <option value="annual">Annual / Vacation</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Start Date</label>
+                            <input type="date" name="start_date" required class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 transition-all text-center">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">End Date</label>
+                            <input type="date" name="end_date" required class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 transition-all text-center">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 pb-2">
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Description</label>
+                        <textarea name="reason" rows="3" placeholder="Please provide details..."
+                            class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium text-slate-800 focus:bg-white focus:border-orange-400 focus:ring-4 focus:ring-orange-500/10 transition-all resize-none placeholder-slate-400"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full group relative bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black py-4 rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-xl shadow-lg shadow-orange-500/20 text-xs uppercase tracking-[0.2em] overflow-hidden">
+                        <span class="relative z-10 flex items-center justify-center">
+                            Submit Request
+                            <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Leave History Table -->
+        <div class="xl:col-span-8 border border-white/80 rounded-[2.5rem] bg-white/40 glass-card shadow-2xl shadow-slate-200/50 flex flex-col h-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200/50 flex items-center justify-between">
+                <h3 class="text-lg font-black text-slate-800">History Log</h3>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-orange-600 px-3 py-1 bg-orange-50 rounded-full border border-orange-100">{{ leaves|length }} Requests</span>
+            </div>
+            
+            <div class="overflow-x-auto flex-grow p-2 sm:p-4">
+                {% if leaves|length == 0 %}
+                <div class="flex flex-col items-center justify-center h-64 text-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <p class="text-slate-500 font-bold">No leave history found.</p>
+                </div>
+                {% else %}
+                <table class="w-full text-left border-collapse min-w-[600px]">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200/50 w-2/5">Details</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200/50">Duration</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200/50 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100/80">
+                        {% for leave in leaves %}
+                        <tr class="group hover:bg-white/50 transition-colors">
+                            <td class="px-6 py-5">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 rounded-[1rem] flex items-center justify-center flex-shrink-0 shadow-sm border
+                                        {% if leave.leave_type == 'sick' %}bg-rose-50 text-rose-500 border-rose-100
+                                        {% elif leave.leave_type == 'casual' %}bg-blue-50 text-blue-500 border-blue-100
+                                        {% else %}bg-amber-50 text-amber-500 border-amber-100{% endif %} group-hover:scale-105 transition-transform">
+                                        {% if leave.leave_type == 'sick' %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                        {% elif leave.leave_type == 'casual' %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        {% else %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-black text-slate-800 capitalize">{{ leave.leave_type }} Leave</p>
+                                        <p class="text-[11px] text-slate-400 font-semibold mt-0.5 truncate max-w-[200px]">{{ leave.reason or 'No reason provided' }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="flex flex-col">
+                                    <p class="text-sm font-bold text-slate-700 bg-slate-50 inline-block px-3 py-1.5 rounded-xl border border-slate-100">
+                                        {{ leave.start_date.strftime('%b %d') }} &rarr; {{ leave.end_date.strftime('%b %d, %Y') }}
+                                    </p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-right">
+                                <span class="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm inline-flex items-center
+                                    {% if leave.status == 'approved' %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                                    {% elif leave.status == 'rejected' %}bg-rose-50 text-rose-600 border border-rose-100
+                                    {% else %}bg-amber-50 text-amber-600 border border-amber-100{% endif %}">
+                                    {% if leave.status == 'approved' %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                                    {% elif leave.status == 'rejected' %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span>
+                                    {% else %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2"></span>
+                                    {% endif %}
+                                    {{ leave.status }}
+                                </span>
+                                <p class="text-[9px] font-bold uppercase text-slate-400 mt-2 tracking-widest">Applied: {{ leave.applied_on.strftime('%b %d') }}</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

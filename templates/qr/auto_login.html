@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-6 flex flex-col items-center justify-center min-h-[70vh]">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 w-full text-center relative overflow-hidden">
+        <!-- Decor -->
+        <div class="absolute top-[-50px] right-[-50px] w-32 h-32 bg-orange-500/10 rounded-full blur-3xl z-0"></div>
+        <div class="absolute bottom-[-50px] left-[-50px] w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl z-0"></div>
+
+        <div class="relative z-10 w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-6 text-orange-600 shadow-inner">
+            <svg class="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+        </div>
+
+        <h2 class="text-2xl font-black text-slate-800 tracking-tight leading-tight mb-2">Verifying Location</h2>
+        <p class="text-sm font-bold text-slate-400 mb-8 uppercase tracking-widest">{{ user_info.username }}</p>
+
+        <div id="status-container" class="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex items-center justify-center space-x-4">
+            <div id="spinner" class="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-600 block"></div>
+            <p id="status-text" class="text-sm font-black text-slate-600">Requesting GPS Access...</p>
+        </div>
+        
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-8">Secure Auto-Login</p>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+document.addEventListener('DOMContentLoaded', () => {
+    const statusText = document.getElementById('status-text');
+    const spinner = document.getElementById('spinner');
+    const statusContainer = document.getElementById('status-container');
+    const token = "{{ token }}";
+
+    function showError(msg) {
+        spinner.classList.replace('block', 'hidden');
+        statusContainer.classList.replace('bg-slate-50', 'bg-rose-50');
+        statusContainer.classList.replace('border-slate-100', 'border-rose-100');
+        statusText.classList.replace('text-slate-600', 'text-rose-600');
+        statusText.innerText = msg;
+    }
+
+    if (!navigator.geolocation) {
+        showError("Geolocation not supported by device");
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        statusText.innerText = "Authenticating...";
+        
+        try {
+            const response = await fetch('/qr/api/qr-login', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    token: token,
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                statusText.innerText = "Success! Redirecting...";
+                statusText.classList.replace('text-slate-600', 'text-emerald-600');
+                spinner.classList.replace('border-orange-600', 'border-emerald-600');
+                statusContainer.classList.replace('bg-slate-50', 'bg-emerald-50');
+                statusContainer.classList.replace('border-slate-100', 'border-emerald-100');
+                setTimeout(() => window.location.href = result.redirect_url, 1000);
+            } else {
+                showError(result.message || "Authentication Failed");
+                setTimeout(() => window.location.href = "/login", 3000);
+            }
+        } catch (e) {
+            showError("Network Error");
+        }
+    }, (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+            showError("Please allow location access to log in.");
+        } else {
+            showError("Failed to get location.");
+        }
+    }, { enableHighAccuracy: true, timeout: 5000 });
+});
+</script>
+{% endblock %}

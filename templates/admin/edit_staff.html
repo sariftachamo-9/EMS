@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Edit Member Profile{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-10 flex items-center justify-between">
+        <div>
+            <h3 class="text-3xl font-black text-slate-900 tracking-tight">Profile Editor</h3>
+            <p class="text-slate-500 font-medium">Updating details for {{ profile.full_name }} ({{ profile.employee_id }})</p>
+        </div>
+        {% set cancel_url = url_for('admin.employees') if user.role == 'employee' else (url_for('admin.interns') if user.role == 'intern' else url_for('admin.students')) %}
+        <a href="{{ cancel_url }}" class="text-slate-400 hover:text-slate-600 transition flex items-center font-bold text-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Cancel & Exit
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-8 bg-white p-12 rounded-[2.5rem] shadow-2xl shadow-slate-100 border border-slate-100">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Authentication Read-Only Section -->
+        <div class="space-y-6">
+            <h4 class="text-[10px] font-black uppercase text-orange-600 tracking-[0.3em] mb-4">Account Security</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-700 tracking-widest ml-1 italic">Login Email</label>
+                    <input type="email" value="{{ user.email }}" disabled 
+                        class="w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-black text-slate-900 cursor-not-allowed">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-700 tracking-widest ml-1 italic">Staff Access ID</label>
+                    <input type="text" value="{{ profile.employee_id }}" disabled 
+                        class="w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-black text-slate-900 cursor-not-allowed">
+                </div>
+            </div>
+        </div>
+
+        <div class="h-px bg-slate-100"></div>
+
+        <!-- Identity Section -->
+        <div class="space-y-6">
+            <h4 class="text-[10px] font-black uppercase text-orange-500 tracking-[0.3em] mb-4">Personal Information</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">First Name</label>
+                    <input type="text" name="first_name" required value="{{ profile.full_name.split(' ')[0] }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Middle Name (Optional)</label>
+                    {% set names = profile.full_name.split(' ') %}
+                    <input type="text" name="middle_name" value="{{ names[1] if names|length > 2 else '' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Last Name</label>
+                    {% set names = profile.full_name.split(' ') %}
+                    <input type="text" name="last_name" required value="{{ names[-1] if names|length > 1 else '' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Personal Email</label>
+                    <input type="email" name="personal_email" value="{{ profile.personal_email or '' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Phone Number (Nepal)</label>
+                    <div class="flex items-center">
+                        <span class="bg-slate-100 border-r border-slate-200 rounded-l-2xl px-4 py-4 text-sm font-bold text-slate-500">+977</span>
+                        <input type="text" name="phone_digits" required value="{{ profile.phone.replace('+977 ', '') if profile.phone else '' }}" pattern="(98|97|96)\d{8}" maxlength="10"
+                            class="w-full bg-slate-50 border-none rounded-r-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition"
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="h-px bg-slate-100"></div>
+
+        <!-- Assignment Section -->
+        <div class="space-y-6">
+            <h4 class="text-[10px] font-black uppercase text-orange-500 tracking-[0.3em] mb-4">Work & Role</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Department</label>
+                    <select name="department" class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                        <option value="IT" {% if profile.department == 'IT' %}selected{% endif %}>IT</option>
+                        <option value="Engineer" {% if profile.department == 'Engineer' %}selected{% endif %}>Engineer</option>
+                        <option value="HR" {% if profile.department == 'HR' %}selected{% endif %}>HR</option>
+                        <option value="Finance" {% if profile.department == 'Finance' %}selected{% endif %}>Finance</option>
+                        <option value="Marketing" {% if profile.department == 'Marketing' %}selected{% endif %}>Marketing</option>
+                    </select>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Designation</label>
+                    <input type="text" name="designation" required value="{{ profile.designation }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Role Type</label>
+                    <select name="role" class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                        <option value="employee" {% if user.role == 'employee' %}selected{% endif %}>Full-time Employee</option>
+                        <option value="intern" {% if user.role == 'intern' %}selected{% endif %}>Intern</option>
+                        <option value="student" {% if user.role == 'student' %}selected{% endif %}>Student</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="h-px bg-slate-100"></div>
+
+        {% if user.role == 'student' %}
+        <!-- Workshop & Fees Section -->
+        <div class="space-y-6">
+            <h4 class="text-[10px] font-black uppercase text-orange-500 tracking-[0.3em] mb-4">Workshop & Fees</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Total Workshop Fee</label>
+                    <input type="number" name="salary" id="total_fee" value="{{ profile.base_salary }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Current Paid Amount</label>
+                    <input type="number" name="hra" id="paid_amount" value="{{ profile.hra }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Remaining Balance</label>
+                    <input type="number" id="remaining_balance" value="0" readonly
+                        class="w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-400 cursor-not-allowed">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Payment Status</label>
+                    <input type="text" name="payment_status" id="payment_status" value="{{ profile.payment_status or 'Unpaid' }}" readonly
+                        class="w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-black cursor-not-allowed">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Workshop Start Date</label>
+                    <input type="date" name="workshop_start_date" required value="{{ profile.joining_date.strftime('%Y-%m-%d') if profile.joining_date else '' }}"
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Workshop End Date</label>
+                    <input type="date" name="workshop_end_date" required value="{{ profile.workshop_end_date.strftime('%Y-%m-%d') if profile.workshop_end_date else '' }}"
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Workshop Status</label>
+                    <select name="workshop_status" class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                        <option value="Ongoing" {% if profile.workshop_status == 'Ongoing' %}selected{% endif %}>Ongoing</option>
+                        <option value="Completed" {% if profile.workshop_status == 'Completed' %}selected{% endif %}>Completed</option>
+                        <option value="On Hold" {% if profile.workshop_status == 'On Hold' %}selected{% endif %}>On Hold</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Compensation Section -->
+        <div class="space-y-6">
+            <h4 class="text-[10px] font-black uppercase text-orange-500 tracking-[0.3em] mb-4">Financials & Benefits</h4>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">{{ 'Monthly Stipend' if user.role == 'intern' else 'Annual Salary' }}</label>
+                    <input type="number" name="salary" value="{{ profile.base_salary }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Overtime Rate/Hr</label>
+                    <input type="number" step="0.01" name="ot_rate" value="{{ profile.overtime_rate }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Leave Allowance (Days)</label>
+                    <input type="number" name="leave_days" value="{{ profile.leave_allowance }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="pt-10">
+            <button type="submit" class="w-full bg-slate-900 text-white font-black py-6 rounded-[2rem] hover:bg-black transition-all shadow-xl shadow-slate-200 uppercase tracking-[0.2em] text-xs">
+                Save Profile Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+<script>
+{% if user.role == 'student' %}
+function updatePaymentLogic() {
+    const total = parseFloat(document.getElementById('total_fee').value) || 0;
+    const paid = parseFloat(document.getElementById('paid_amount').value) || 0;
+    const remaining = total - paid;
+    
+    document.getElementById('remaining_balance').value = remaining.toFixed(2);
+    
+    const statusInput = document.getElementById('payment_status');
+    if (paid <= 0) {
+        statusInput.value = 'Unpaid';
+        statusInput.className = 'w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-black text-red-600 cursor-not-allowed';
+    } else if (paid < total) {
+        statusInput.value = 'Partially Paid';
+        statusInput.className = 'w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-black text-orange-600 cursor-not-allowed';
+    } else {
+        statusInput.value = 'Fully Paid';
+        statusInput.className = 'w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm font-black text-green-600 cursor-not-allowed';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updatePaymentLogic();
+    document.getElementById('total_fee').addEventListener('input', updatePaymentLogic);
+    document.getElementById('paid_amount').addEventListener('input', updatePaymentLogic);
+});
+{% endif %}
+</script>

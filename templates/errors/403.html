@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[70vh] flex items-center justify-center p-6">
+    <div class="text-center max-w-xl">
+        <div class="relative inline-block mb-12">
+            <div class="w-40 h-40 bg-red-50 rounded-[3rem] rotate-12 absolute inset-0 animate-pulse"></div>
+            <div class="w-40 h-40 bg-white border-2 border-red-100 rounded-[3rem] -rotate-6 relative flex items-center justify-center shadow-xl shadow-red-100/50">
+                <svg class="w-16 h-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+        </div>
+        
+        <h1 class="text-5xl font-black text-slate-900 tracking-tight mb-6">Access Restricted</h1>
+        <p class="text-lg text-slate-500 font-medium mb-12 leading-relaxed">
+            Your current security clearance does not allow access to this terminal. Please contact a higher-level administrator if you believe this is an error.
+        </p>
+        
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="{{ url_for('index') }}" class="w-full sm:w-auto bg-slate-900 text-white px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black hover:scale-105 transition-all shadow-xl shadow-slate-200">
+                Back to Dashboard
+            </a>
+            <a href="{{ url_for('contact.display_contact') }}" class="w-full sm:w-auto bg-white border-2 border-slate-100 text-slate-600 px-10 py-5 rounded-2xl font-black text-xs uppercase tracking-widest hover:border-slate-300 transition-all">
+                Request Access
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

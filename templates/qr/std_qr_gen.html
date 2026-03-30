@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-screen py-8 px-4 bg-[#f8fafc]">
+    <!-- Branding Icon (Top Center) -->
+    <div class="mb-10">
+        <div class="w-20 h-20 bg-[#fff7ed] rounded-3xl flex items-center justify-center shadow-sm border border-orange-100/50">
+            <svg class="w-12 h-12 text-[#ea580c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h2M4 8h2m1-4h1m15 1h1M4 20h.01M4 16h.01M4 12h.01M4 8h.01M4 4h.01"></path>
+            </svg>
+        </div>
+    </div>
+
+    <!-- Main Card Container -->
+    <div class="bg-white p-2 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-50 mb-12 w-full max-w-sm">
+        <div class="bg-[#f8fafc] p-8 rounded-[2.5rem] border border-slate-100 flex flex-col items-center">
+            <!-- Top Row: Name and ID -->
+            <div class="w-full flex justify-between items-center mb-8 px-2">
+                <span class="text-[10px] font-black text-orange-600 uppercase tracking-widest">{{ user.profile.full_name or user.username }}</span>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ID: {{ user.profile.employee_id }}</span>
+            </div>
+
+            <!-- QR Center -->
+            <div id="qrcode" class="mix-blend-multiply p-2 bg-white rounded-3xl shadow-sm border border-slate-100">
+                <!-- QR Generated Here -->
+            </div>
+
+            <!-- Bottom: Scan Me -->
+            <div class="mt-8 text-center">
+                <span class="text-[11px] font-black text-[#0f172a] uppercase tracking-[0.4em] opacity-40">SCAN ME</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="w-full max-w-sm px-6 flex flex-col space-y-4">
+        <button id="downloadBtn" class="block w-full bg-emerald-600 text-white text-center py-5 rounded-[1.25rem] font-black text-base tracking-wide hover:bg-emerald-700 transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1 flex items-center justify-center space-x-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            <span>Download Badge</span>
+        </button>
+        <a href="{{ url_for('admin.students') }}" class="block w-full bg-[#0f172a] text-white text-center py-5 rounded-[1.25rem] font-black text-base tracking-wide hover:bg-black transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-1">
+            Done
+        </a>
+    </div>
+
+</div>
+
+<!-- Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const qrcodeContainer = document.getElementById("qrcode");
+        new QRCode(qrcodeContainer, {
+            text: "{{ verify_url }}",
+            width: 280,
+            height: 280,
+            colorDark : "#0f172a",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+
+        // Download functionality
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const img = qrcodeContainer.querySelector('img');
+            const canvas = qrcodeContainer.querySelector('canvas');
+            
+            let downloadUrl;
+            if (img && img.src) {
+                downloadUrl = img.src;
+            } else if (canvas) {
+                downloadUrl = canvas.toDataURL("image/png");
+            }
+
+            if (downloadUrl) {
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = "Workshop_Badge_{{ (user.profile.full_name or user.username)|replace(' ', '_') }}.png";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
+    });
+</script>
+
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        .flex, .flex * { visibility: visible; }
+        .flex { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; margin: 0; padding: 40px; }
+        .max-w-sm, .mt-8, .blob { display: none !important; }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Verify Location | Global IOT Nepal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ea580c;
+            --primary-hover: #c2410c;
+            --success: #10b981;
+            --error: #ef4444;
+            --bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            width: 120px;
+            margin-bottom: 2rem;
+        }
+
+        .status-header {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.025em;
+        }
+
+        .status-text {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 2.5rem;
+        }
+
+        /* Verification Animation */
+        .verify-anim {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2.5rem;
+            position: relative;
+        }
+
+        .circle {
+            width: 80px;
+            height: 80px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-icon, .error-icon {
+            display: none;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .success-icon { background: #ecfdf5; color: var(--success); }
+        .error-icon { background: #fee2e2; color: var(--error); }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 1rem;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: none;
+        }
+
+        .btn-primary { background: var(--primary); color: white; margin-top: 1rem; }
+        .btn-outline { background: #f9fafb; color: var(--text-muted); border: 1.5px solid #e5e7eb; margin-top: 1rem; }
+
+        /* Recovery Instructions */
+        .recovery-block {
+            display: none;
+            text-align: left;
+            background: #f8fafc;
+            padding: 1.25rem;
+            border-radius: 14px;
+            margin-top: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .recovery-title {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .recovery-step {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .step-num {
+            background: #e2e8f0;
+            color: #475569;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Tabs UI */
+        .tabs { display: flex; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
+        .tab-btn { flex: 1; padding: 0.75rem; background: none; border: none; border-bottom: 2px solid transparent; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #fff; }
+        .tab-content { display: none; text-align: left; background: #fff; }
+        .tab-content.active { display: block; }
+
+        /* Accuracy Badge */
+        .accuracy-badge {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #166534;
+        }
+        .accuracy-badge.warning {
+            background: #fffbeb;
+            border-color: #fde68a;
+            color: #92400e;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="EMS Logo" class="logo" onerror="this.src='https://via.placeholder.com/200x80?text=EMS+Logo'">
+
+        <div class="verify-anim" id="anim-box">
+            <div class="circle" id="spinner"></div>
+            <div class="success-icon" id="success-icon">
+                <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <div class="error-icon" id="error-icon">
+                <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+            </div>
+        </div>
+
+        {% if error %}
+        <h1 class="status-header" style="color: var(--error);">Token Expired</h1>
+        <p class="status-text">{{ error }}</p>
+        {% else %}
+        <h1 class="status-header" id="header">Verifying...</h1>
+        <p class="status-text" id="description">We are checking your physical proximity to the office.</p>
+
+        <div class="accuracy-badge" id="accuracy-info"></div>
+
+        <div class="recovery-block" id="recovery">
+            <h2 style="font-size: 1.25rem; font-weight: 900; color: var(--error); margin-bottom: 0.5rem; text-align: center;">Action Required</h2>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem; text-align: center;">Location access was denied or is turned off. We need your location to confirm you're at the office.</p>
+
+            <div style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fff;">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('android', this)">Android / Chrome</button>
+                    <button class="tab-btn" onclick="switchTab('ios', this)">iPhone / Safari</button>
+                </div>
+                
+                <!-- Android -->
+                <div id="tab-android" class="tab-content active" style="padding: 1rem;">
+                    <div class="recovery-step"><span class="step-num">1</span> <div>Ensure your phone's <b>GPS is ON</b>.</div></div>
+                    <div class="recovery-step"><span class="step-num">2</span> <div>Tap the <b>Lock icon</b> next to the web address at the top.</div></div>
+                    <div class="recovery-step"><span class="step-num">3</span> <div>Go to <b>Permissions &gt; Location</b> and set to <b>Allow</b>.</div></div>
+                </div>
+
+                <!-- iOS -->
+                <div id="tab-ios" class="tab-content" style="padding: 1rem;">
+                    <div class="recovery-step"><span class="step-num">1</span> <div>Open iPhone <b>Settings</b> app.</div></div>
+                    <div class="recovery-step"><span class="step-num">2</span> <div>Go to <b>Privacy & Security &gt; Location Services</b> (Turn ON).</div></div>
+                    <div class="recovery-step"><span class="step-num">3</span> <div>Scroll to <b>Safari Websites</b> (or Chrome) and select <b>While Using the App</b>.</div></div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="retry-btn" onclick="requestLocation()">Verify Location</button>
+        <button class="btn btn-outline" id="close-btn" onclick="window.close()">Close Page</button>
+        {% endif %}
+    </div>
+
+    {% if not error %}
+    <script nonce="{{ csp_nonce() }}">
+        const token = "{{ token }}";
+        const header = document.getElementById('header');
+        const desc = document.getElementById('description');
+        const spinner = document.getElementById('spinner');
+        const successIcon = document.getElementById('success-icon');
+        const errorIcon = document.getElementById('error-icon');
+        const retryBtn = document.getElementById('retry-btn');
+        const recovery = document.getElementById('recovery');
+        const accuracyInfo = document.getElementById('accuracy-info');
+
+        function switchTab(os, btn) {
+            document.getElementById('tab-android').classList.remove('active');
+            document.getElementById('tab-ios').classList.remove('active');
+            document.getElementById('tab-' + os).classList.add('active');
+            
+            const tabs = btn.parentElement.querySelectorAll('.tab-btn');
+            tabs.forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function setStatus(type, title, message) {
+            spinner.style.display = 'none';
+            successIcon.style.display = 'none';
+            errorIcon.style.display = 'none';
+            retryBtn.style.display = 'none';
+            recovery.style.display = 'none';
+
+            header.textContent = title;
+            desc.textContent = message;
+
+            if (type === 'success') {
+                successIcon.style.display = 'flex';
+                header.style.color = 'var(--success)';
+            } else if (type === 'error') {
+                errorIcon.style.display = 'flex';
+                header.style.color = 'var(--error)';
+                retryBtn.style.display = 'block';
+            } else if (type === 'denied') {
+                errorIcon.style.display = 'flex';
+                header.style.color = 'var(--error)';
+                recovery.style.display = 'block';
+                retryBtn.style.display = 'block';
+            }
+        }
+
+        async function requestLocation() {
+            // HTTPS Check
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                setStatus('denied', 'Insecure Connection', 'Location access is only allowed over HTTPS. Please check your URL.');
+                return;
+            }
+
+            setStatus('loading', 'Checking...', 'Requesting GPS access from your browser.');
+            spinner.style.display = 'block';
+
+            if (!navigator.geolocation) {
+                setStatus('error', 'Unsupported', 'Your browser does not support Geolocation.');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const { latitude, longitude, accuracy } = position.coords;
+                    
+                    // Show accuracy info
+                    if (accuracyInfo) {
+                        accuracyInfo.style.display = 'block';
+                        if (accuracy > 100) {
+                            accuracyInfo.className = 'accuracy-badge warning';
+                            accuracyInfo.textContent = `GPS Accuracy: ~${Math.round(accuracy)}m (may be low)`;
+                        } else {
+                            accuracyInfo.className = 'accuracy-badge';
+                            accuracyInfo.textContent = `GPS Accuracy: ~${Math.round(accuracy)}m`;
+                        }
+                    }
+                    
+                    await submitLocation(latitude, longitude);
+                },
+                async (error) => {
+                    if (error.code === error.PERMISSION_DENIED) {
+                        // Attempt IP-based verification fallback
+                        setStatus('loading', 'GPS Denied', 'Attempting network-level verification...');
+                        await submitLocation(null, null);
+                    } else {
+                        setStatus('error', 'GPS Error', 'Could not determine your location. Please check your GPS and turn it on, then try again.');
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+        async function submitLocation(lat, lon) {
+            try {
+                const response = await fetch('/qr/api/submit-location', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ token, latitude: lat, longitude: lon })
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    setStatus('success', 'Access Granted', 'Your location has been verified. Your login portal will now unlock.');
+                } else {
+                    setStatus('error', 'Access Denied', result.message);
+                }
+            } catch (err) {
+                setStatus('error', 'Network Error', 'Could not connect to the server. Please check your connection.');
+            }
+        }
+
+        // Auto-start on load
+        window.onload = requestLocation;
+    </script>
+    {% endif %}
+</body>
+</html>

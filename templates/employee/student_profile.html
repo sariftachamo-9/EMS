@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    @keyframes float-slow {
+        0%, 100% { transform: translateY(0) scale(1); }
+        50% { transform: translateY(-10px) scale(1.02); }
+    }
+    .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
+    .profile-glass {
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 25px 50px -12px rgba(249, 115, 22, 0.1);
+    }
+    .gradient-text-orange {
+        background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+</style>
+
+<div class="max-w-6xl mx-auto px-4 py-12 relative min-h-screen font-sans">
+    
+    <!-- Background Orbs -->
+    <div class="fixed top-0 right-0 w-[500px] h-[500px] bg-orange-400/10 rounded-full mix-blend-multiply blur-[120px] pointer-events-none animate-float-slow z-0"></div>
+    <div class="fixed bottom-0 left-0 w-[600px] h-[600px] bg-emerald-300/10 rounded-full mix-blend-multiply blur-[150px] pointer-events-none animate-float-slow z-0" style="animation-delay: -4s;"></div>
+
+    <!-- Page Header -->
+    <div class="relative z-10 flex flex-col items-center justify-center text-center mb-16 space-y-4">
+        <div class="inline-flex items-center justify-center px-4 py-1.5 rounded-full bg-orange-100/50 border border-orange-200/50 text-orange-600 text-[10px] font-black uppercase tracking-[0.2em] mb-2 backdrop-blur-md">
+            Student Identity
+        </div>
+        <h1 class="text-5xl md:text-6xl font-black text-slate-900 tracking-tight">
+            My <span class="gradient-text-orange">Profile</span>
+        </h1>
+        <p class="text-slate-500 font-medium text-lg max-w-xl mx-auto">View your workshop details and manage your contact information.</p>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 relative z-10 w-full">
+        
+        <!-- Left Column: Student ID Card -->
+        <div class="lg:col-span-5 flex flex-col">
+            <div class="profile-glass rounded-[3rem] p-1 h-full relative overflow-hidden group border border-white/90 bg-white/40 shadow-2xl">
+                <div class="bg-gradient-to-br from-white/80 to-white/40 h-full rounded-[2.75rem] p-10 flex flex-col items-center justify-center text-center relative z-10 backdrop-blur-xl">
+                    
+                    <!-- Role Badge -->
+                    <div class="absolute top-6 right-6">
+                        <span class="px-5 py-2 bg-gradient-to-r from-orange-700 to-amber-800 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-orange-900/20">
+                            Student
+                        </span>
+                    </div>
+
+                    <!-- Avatar -->
+                    <div class="relative w-40 h-40 mb-8 mt-4 group-hover:scale-105 transition-transform duration-500 ease-out">
+                        <div class="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity duration-500"></div>
+                        <div class="w-full h-full bg-gradient-to-br from-orange-500 to-amber-600 rounded-full p-1.5 shadow-2xl shadow-orange-500/40 relative z-10">
+                            <div class="w-full h-full bg-white rounded-full flex items-center justify-center border-4 border-white overflow-hidden shadow-inner">
+                                <span class="text-7xl font-black gradient-text-orange">{{ profile.full_name[0]|upper if profile else current_user.email[0]|upper }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Identity Info -->
+                    <h2 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">{{ profile.full_name if profile else 'N/A' }}</h2>
+                    <p class="text-orange-600 font-black tracking-widest text-[11px] uppercase bg-orange-50/80 px-4 py-2 rounded-xl border border-orange-100/50">Workshop Participant</p>
+                    
+                    <div class="mt-6 flex items-center justify-center w-full space-x-2 bg-slate-50/50 py-3 rounded-2xl border border-slate-100/50">
+                        <p class="text-slate-600 font-bold uppercase tracking-widest text-[10px]">{{ profile.department or 'Workshop Group' }}</p>
+                    </div>
+
+                    <div class="w-full mt-8 pt-8 border-t border-slate-200/50 flex flex-col space-y-4">
+                        <div class="flex justify-between items-center text-left bg-white/50 px-4 py-3 rounded-2xl border border-slate-100">
+                            <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest">Login Email</span>
+                            <span class="text-xs font-bold text-slate-800">{{ current_user.email }}</span>
+                        </div>
+                        <div class="flex justify-between items-center text-left bg-white/50 px-4 py-3 rounded-2xl border border-slate-100">
+                            <span class="text-[9px] font-black uppercase text-slate-400 tracking-widest">Joining Date</span>
+                            <span class="text-xs font-bold text-slate-800">{{ profile.joining_date.strftime('%b %d, %Y') if profile and profile.joining_date else '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="lg:col-span-7 flex flex-col space-y-8 h-full">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Workshop Status -->
+                <div class="profile-glass rounded-[2rem] p-6 border border-white/90 bg-white/40 shadow-xl relative overflow-hidden">
+                    <p class="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Workshop Status</p>
+                    <p class="text-2xl font-black text-slate-800 tracking-tight">{{ profile.workshop_status or 'Ongoing' }}</p>
+                </div>
+
+                <!-- Payment Status -->
+                <div class="profile-glass rounded-[2rem] p-6 border border-white/90 bg-white/40 shadow-xl relative overflow-hidden">
+                    <p class="text-[9px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Payment Status</p>
+                    <p class="text-2xl font-black {% if profile.payment_status == 'Paid' %}text-emerald-600{% else %}text-amber-600{% endif %} tracking-tight">{{ profile.payment_status or 'Unpaid' }}</p>
+                </div>
+
+                <!-- Student ID -->
+                <div class="rounded-[2rem] p-6 bg-gradient-to-br from-slate-900 to-slate-800 border border-slate-700 text-white shadow-xl relative overflow-hidden">
+                    <p class="text-[9px] font-black uppercase text-orange-400 tracking-[0.2em] mb-1">Student ID</p>
+                    <p class="text-2xl font-black">{{ profile.employee_id if profile else '—' }}</p>
+                </div>
+            </div>
+
+            <!-- Settings Form -->
+            <div class="profile-glass rounded-[2.5rem] p-8 sm:p-10 flex-grow shadow-2xl relative overflow-hidden border border-white/90 bg-white/40">
+                <div class="flex items-center space-x-5 mb-10 relative z-10">
+                    <div class="w-3 h-12 rounded-full bg-gradient-to-b from-orange-500 to-amber-400 shadow-md"></div>
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 tracking-tight">Personal Data</h3>
+                    </div>
+                </div>
+
+                <form method="POST" class="space-y-8 relative z-10 w-full">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <label class="block text-[9px] font-black uppercase text-slate-500 tracking-[0.2em] mb-2 px-1">Personal Email</label>
+                            <input type="email" name="personal_email" value="{{ profile.personal_email or '' }}"
+                                class="w-full bg-white/70 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-800 outline-none focus:border-violet-400 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-black uppercase text-slate-500 tracking-[0.2em] mb-2 px-1">Phone Number (+977)</label>
+                            <input type="text" name="phone_digits" value="{{ profile.phone.replace('+977 ', '') if profile and profile.phone else '' }}"
+                                pattern="\d{10}" maxlength="10"
+                                class="w-full bg-white/70 border-2 border-slate-100 rounded-2xl px-6 py-4 text-sm font-bold text-slate-800 outline-none focus:border-orange-400 transition-all"
+                                placeholder="98XXXXXXXX">
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full sm:w-auto bg-slate-900 text-white font-black py-4 px-10 rounded-2xl hover:bg-orange-700 transition-all uppercase tracking-[0.2em] text-[11px]">
+                            Update Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

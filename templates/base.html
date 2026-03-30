@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS - Enterprise Employee Management System</title>
+    <!-- Tailwind CSS -->
+    <script nonce="{{ csp_nonce() }}" src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script nonce="{{ csp_nonce() }}" defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Enterprise Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/enterprise.css') }}">
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="text-slate-900 overflow-x-hidden">
+    <!-- Background Blobs -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="blob top-[-10%] left-[-10%]"></div>
+        <div class="blob bottom-[-10%] right-[-10%] animate-pulse-soft" style="background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, rgba(255, 255, 255, 0) 70%);"></div>
+    </div>
+
+    <div class="min-h-screen flex flex-col">
+        {% set main_content %}
+            {% block content %}{% endblock %}
+        {% endset %}
+
+        {% if current_user.is_authenticated %}
+            {% if current_user.role == 'admin' %}
+                <!-- Admin Sidebar Layout -->
+                <div class="admin-layout fixed inset-0 z-10 flex overflow-hidden bg-slate-50/30">
+                    <aside class="bg-white border-r border-slate-100 flex flex-col w-72 h-full flex-shrink-0 relative z-40">
+                        <div class="p-8 pb-6">
+                            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="GN GLOBAL IOT" class="h-20 w-auto" onerror="this.src='https://via.placeholder.com/200x80?text=GN+GLOBAL+IOT'">
+
+                        </div>
+                        
+                        <nav class="flex-grow px-4 pb-4 space-y-1.5 overflow-hidden">
+                            <div class="py-4">
+                                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.dashboard') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.dashboard') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Dashboard</span>
+                                </a>
+                                <a href="{{ url_for('admin.employees') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.employees') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.employees') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Employees</span>
+                                </a>
+                                <a href="{{ url_for('admin.interns') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.interns') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.interns') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Interns</span>
+                                </a>
+                                <a href="{{ url_for('admin.students') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.students') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.students') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Students</span>
+                                </a>
+                                <a href="{{ url_for('admin.attendance') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.attendance') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.attendance') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Attendance</span>
+                                </a>
+                                <a href="{{ url_for('admin.notices') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.notices') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.notices') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Notices</span>
+                                </a>
+                                <a href="{{ url_for('admin.leave_requests') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.leave_requests') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.leave_requests') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Leave Requests</span>
+                                </a>
+                                <a href="{{ url_for('admin.employee_queries') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.employee_queries') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.employee_queries') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Employee Queries</span>
+                                </a>
+                                <a href="{{ url_for('admin.payroll') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.payroll') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.payroll') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Payroll</span>
+                                </a>
+                                <a href="{{ url_for('admin.audit_logs') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.audit_logs') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.audit_logs') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Audit Logs</span>
+                                </a>
+                                <a href="{{ url_for('admin.office_settings') }}" class="flex items-center space-x-3 px-4 py-3.5 rounded-2xl transition-all duration-300 {{ 'bg-orange-50/80 text-orange-600 shadow-sm' if request.path == url_for('admin.office_settings') else 'hover:bg-slate-50 text-slate-500 hover:text-slate-800' }}">
+                                    <svg class="w-5 h-5 {{ 'text-orange-500' if request.path == url_for('admin.office_settings') else 'text-slate-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    <span class="text-sm font-bold tracking-tight">Settings</span>
+                                </a>
+                            </div>
+                        </nav>
+                        
+                        <div class="p-6 border-t border-slate-50">
+                            <a href="{{ url_for('auth.logout') }}" class="flex items-center space-x-3 px-4 py-3.5 text-rose-500 hover:bg-rose-50 rounded-2xl transition-all duration-300 group">
+                                <svg class="w-5 h-5 group-hover:rotate-12 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                <span class="text-sm font-black uppercase tracking-widest">Logout</span>
+                            </a>
+                        </div>
+                    </aside>
+                    
+                    <div class="flex-grow flex flex-col h-full overflow-hidden">
+                        <header class="h-24 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-12 flex-shrink-0 relative z-30">
+                            <h2 class="text-2xl font-black text-slate-800 tracking-tight">{% block admin_title %}Administration{% endblock %}</h2>
+                            
+                            <div class="flex items-center space-x-6">
+                                <span class="bg-orange-100 text-orange-600 text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg shadow-sm">Admin</span>
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-right">
+                                        <p class="text-sm font-bold text-slate-600">Hello, <span class="text-slate-900">admin</span></p>
+                                    </div>
+                                    <div class="w-11 h-11 bg-slate-100 rounded-2xl border-2 border-white shadow-soft flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </header>
+                        
+                        <div class="flex-grow overflow-y-auto main-scroll p-12 bg-slate-50/50">
+                            <div class="max-w-[1600px] mx-auto">
+                                {{ main_content }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+
+                <!-- Staff / Employee Header Layout -->
+                <div class="flex flex-col min-h-screen bg-gradient-to-br from-[#fff7ed] to-[#eef2ff]" x-data="{ mobileMenuOpen: false }">
+                    <nav class="bg-white/90 backdrop-blur-md saturate-150 border-b border-slate-100 sticky top-0 z-40">
+                        <div class="max-w-7xl mx-auto px-10 flex items-center justify-between h-20">
+                            <!-- Left: Logo -->
+                            <div class="flex-shrink-0">
+                                <a href="{{ url_for('staff.dashboard') }}">
+                                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="GN GLOBAL IOT" class="h-16 w-auto">
+                                </a>
+                            </div>
+
+                            <!-- Center: Nav Links -->
+                            <div class="hidden md:flex items-center space-x-8">
+                                {% set nav_links = [
+                                    ('staff.dashboard', 'Dashboard'),
+                                    ('staff.my_profile', 'My Profile'),
+                                    ('staff.my_queries', 'My Queries')
+                                ] %}
+                                {% set _ = nav_links.append(('staff.my_leaves', 'Leaves')) %}
+
+                                {% for endpoint, label in nav_links %}
+                                <a href="{{ url_for(endpoint) }}" class="relative h-20 flex items-center px-2 text-sm font-bold transition-colors {{ 'text-orange-600' if request.path == url_for(endpoint) else 'text-slate-700 hover:text-slate-900' }}">
+                                    <span>{{ label }}</span>
+                                    {% if request.path == url_for(endpoint) %}
+                                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full"></div>
+                                    {% endif %}
+                                </a>
+                                {% endfor %}
+                                
+                                {% if current_user.role in ['employee', 'intern', 'student'] %}
+                                <a href="{{ url_for('staff.my_payslips') }}" class="relative h-20 flex items-center px-2 text-sm font-bold transition-colors {{ 'text-orange-600' if request.path == url_for('staff.my_payslips') else 'text-slate-700 hover:text-slate-900' }}">
+                                    <span>{% if current_user.role == 'student' %}My Fees{% elif current_user.role == 'intern' %}Stipends{% else %}Payslips{% endif %}</span>
+                                    {% if request.path == url_for('staff.my_payslips') %}
+                                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full"></div>
+                                    {% endif %}
+                                </a>
+                                {% endif %}
+                            </div>
+
+                            <!-- Right: User Info + Logout -->
+                            <div class="flex items-center space-x-6">
+                                <div class="hidden md:flex items-center space-x-2 text-sm font-bold text-slate-700">
+                                    <span>Hello, {{ current_user.profile.full_name.split(' ')[0] if current_user.profile and current_user.profile.full_name else current_user.email.split('@')[0]|capitalize }}</span>
+                                </div>
+                                <a href="{{ url_for('auth.logout') }}" class="hidden md:block text-sm font-bold text-slate-700 hover:text-slate-900 transition-colors">Logout</a>
+
+                                <!-- Mobile Menu button -->
+                                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-xl text-slate-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Menu Dropdown -->
+                        <div x-show="mobileMenuOpen" x-cloak x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" class="md:hidden border-t border-slate-100 bg-white px-6 py-4 space-y-1">
+                            <a href="{{ url_for('staff.dashboard') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.dashboard') else 'text-slate-600 hover:bg-slate-50' }} transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                                <span>Dashboard</span>
+                            </a>
+                            <a href="{{ url_for('staff.my_profile') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.my_profile') else 'text-slate-600 hover:bg-slate-50' }} transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <span>My Profile</span>
+                            </a>
+                             <a href="{{ url_for('staff.my_queries') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.my_queries') else 'text-slate-600 hover:bg-slate-50' }} transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                <span>My Queries</span>
+                            </a>
+                             <a href="{{ url_for('staff.my_leaves') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.my_leaves') else 'text-slate-600 hover:bg-slate-50' }} transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span>Leaves</span>
+                            </a>
+                            {% if current_user.role in ['employee', 'intern', 'student'] %}
+                            <a href="{{ url_for('staff.my_payslips') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.my_payslips') else 'text-slate-600 hover:bg-slate-50' }} transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                                <span>{% if current_user.role == 'student' %}My Fees{% elif current_user.role == 'intern' %}Stipends{% else %}Payslips{% endif %}</span>
+                            </a>
+                            {% endif %}
+                            <div class="pt-2 border-t border-slate-100">
+                                <a href="{{ url_for('auth.logout') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 transition">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                    <span>Logout</span>
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
+                    <main class="flex-grow staff-layout">
+                        {{ main_content }}
+                    </main>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- Unauthenticated Content (Login, etc.) -->
+            <main class="flex-grow">
+                {{ main_content }}
+            </main>
+        {% endif %}
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="fixed bottom-10 right-10 z-50 space-y-4">
+                    {% for category, message in messages %}
+                        <div x-data="{ show: true }" 
+                             x-init="setTimeout(() => show = false, 3000)"
+                             x-show="show" 
+                             x-transition 
+                             class="p-4 rounded-2xl shadow-2xl glass-card flex items-center justify-between min-w-[300px] border-l-4 {% if category == 'success' %}border-emerald-500{% else %}border-orange-500{% endif %}">
+                            <p class="text-sm font-bold text-slate-800">{{ message }}</p>
+                            <button @click="show = false" class="ml-4 text-slate-400 hover:text-slate-600">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+    <script nonce="{{ csp_nonce() }}">
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('toasts', {
+                items: [],
+                add(message, type = 'info', duration = 3000) {
+                    const id = Date.now();
+                    this.items.push({ id, message, type });
+                    setTimeout(() => {
+                        this.remove(id);
+                    }, duration);
+                },
+                remove(id) {
+                    this.items = this.items.filter(i => i.id !== id);
+                }
+            });
+        });
+
+        // Global helper for non-Alpine components
+        window.showToast = (message, type, duration) => {
+            Alpine.store('toasts').add(message, type, duration);
+        }
+    </script>
+</body>
+<div class="fixed bottom-10 right-10 z-[1001] space-y-4" x-data x-cloak>
+    <template x-for="toast in $store.toasts.items" :key="toast.id">
+        <div x-show="true" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 transform translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 transform translate-y-0"
+             x-transition:leave-end="opacity-0 transform translate-y-2"
+             :class="{
+                'border-emerald-500': toast.type === 'success',
+                'border-orange-500': toast.type === 'warning' || toast.type === 'info',
+                'border-rose-500': toast.type === 'danger' || toast.type === 'error'
+             }"
+             class="p-4 rounded-2xl shadow-2xl glass-card flex items-center justify-between min-w-[320px] border-l-4 bg-white/95 backdrop-blur-md">
+            <div class="flex items-center space-x-3">
+                <template x-if="toast.type === 'success'">
+                    <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </template>
+                <template x-if="toast.type === 'danger' || toast.type === 'error'">
+                    <svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </template>
+                <p class="text-sm font-bold text-slate-800" x-text="toast.message"></p>
+            </div>
+            <button @click="$store.toasts.remove(toast.id)" class="ml-4 text-slate-400 hover:text-slate-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </template>
+</div>
+</html>

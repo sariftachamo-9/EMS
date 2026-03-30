@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Payroll Batch: {{ month_str }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Search -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="flex items-center space-x-4">
+            <a href="{{ url_for('admin.payroll') }}" class="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-orange-600 hover:border-orange-200 transition shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div>
+                <h3 class="text-xl font-extrabold text-slate-800">Payroll Batch: <span class="text-orange-600">{{ month_str }}</span></h3>
+                <p class="text-[11px] text-slate-400 font-black uppercase tracking-widest mt-0.5">Staff Distribution & Payment Summary</p>
+            </div>
+        </div>
+
+        <form method="GET" class="relative group w-full md:w-72">
+            <input type="text" name="search" value="{{ curr_search }}" placeholder="Search staff in this batch..." 
+                class="w-full bg-white border border-slate-200 rounded-2xl px-12 py-3.5 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-50 focus:border-orange-400 transition shadow-sm">
+            <svg class="w-5 h-5 text-slate-300 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-orange-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </form>
+    </div>
+    <div class="bg-emerald-50 border border-emerald-100 px-6 py-3 rounded-2xl flex items-center space-x-3">
+            <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span class="text-sm font-bold text-emerald-600 uppercase tracking-widest">Status: Generated</span>
+        </div>
+
+    <!-- Batch Overview Table -->
+    <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-slate-50/50 border-b border-slate-100">
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Staff Identification</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Fee / Salary</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Paid Details</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-rose-400">Deductions (LOP)</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-emerald-500">Net Pay</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for pr in payrolls %}
+                    <tr class="hover:bg-slate-50/30 transition">
+                        <td class="px-8 py-6">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 font-black text-xs">
+                                    {{ pr.user.email[:2].upper() }}
+                                </div>
+                                <div>
+                                    <p class="text-sm font-black text-slate-800">{{ pr.user.profile.full_name }}</p>
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ pr.user.role }} • {{ pr.user.profile.employee_id }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-6">
+                            <span class="text-sm font-bold text-slate-700">{{ 'Stipend' if pr.user.role == 'intern' else 'Rs.' }}{{ "{:,.2f}".format(pr.snapshot_base_salary or 0) }}</span>
+                        </td>
+                        <td class="px-8 py-6">
+                            <div class="space-y-1">
+                                <p class="text-[10px] text-slate-500 font-medium">{{ 'Paid:' if pr.user.role == 'student' else 'HRA:' }} Rs.{{ "{:,.0f}".format(pr.snapshot_hra or 0) }}</p>
+                                <p class="text-[10px] text-slate-500 font-medium">{{ 'Other:' if pr.user.role == 'student' else 'Auto:' }} Rs.{{ "{:,.0f}".format(pr.snapshot_transport or 0) }}</p>
+                            </div>
+                        </td>
+                        <td class="px-8 py-6">
+                            <span class="text-sm font-black text-rose-500">-Rs.{{ "{:,.2f}".format(pr.lop_deduction or 0) }}</span>
+                        </td>
+                        <td class="px-8 py-6">
+                            <span class="text-sm font-black text-emerald-600">Rs.{{ "{:,.2f}".format(pr.net_pay or 0) }}</span>
+                        </td>
+                        <td class="px-8 py-6">
+                            <a href="{{ url_for('admin.view_payslip', payroll_id=pr.id) }}" class="inline-block bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition">
+                                Payslip
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

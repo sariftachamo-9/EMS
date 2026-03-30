@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Attendance History: {{ user.profile.full_name }}{% endblock %}
+
+{% block extra_head %}
+<!-- FullCalendar -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<style>
+    .fc-event { cursor: pointer; border: none !important; padding: 2px 4px !important; border-radius: 4px !important; font-weight: 700 !important; font-size: 0.75rem !important; }
+    .fc-toolbar-title { font-weight: 900 !important; text-transform: uppercase; letter-spacing: -0.025em; color: #1e293b; }
+    .fc-button-primary { 
+        background-color: #f8fafc !important; 
+        border-color: #e2e8f0 !important; 
+        color: #475569 !important;
+        font-weight: 800 !important; 
+        text-transform: uppercase !important; 
+        font-size: 0.7rem !important; 
+        letter-spacing: 0.05em !important; 
+        padding: 0.6rem 1rem !important; 
+        border-radius: 0.75rem !important;
+        transition: all 0.2s !important;
+    }
+    .fc-button-primary:hover { background-color: #f1f5f9 !important; color: #1e293b !important; }
+    .fc-button-active { background-color: #0f172a !important; border-color: #0f172a !important; color: white !important; }
+    .fc-daygrid-day-number { font-weight: 800; font-size: 0.8rem; color: #94a3b8; text-decoration: none !important; }
+    .fc-col-header-cell-cushion { font-weight: 900; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.1em; color: #64748b; padding: 12px !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+            <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 font-black text-xl shadow-sm">
+                {{ user.profile.full_name[0]|upper }}
+            </div>
+            <div>
+                <h3 class="text-2xl font-black text-slate-800 tracking-tight">{{ user.profile.full_name }}</h3>
+                <div class="flex items-center space-x-2 mt-0.5">
+                    <span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-black uppercase tracking-widest">{{ user.role }}</span>
+                    <span class="text-slate-300 font-bold text-xs">&bull;</span>
+                    <span class="text-xs text-slate-400 font-bold uppercase tracking-widest">{{ user.profile.employee_id }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-3">
+            {% if (user.profile.base_salary or 0) > 0 %}
+            <a href="{{ url_for('admin.staff_payroll_detail', user_id=user.id) }}" 
+               class="bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-100 transition">
+                View {{ "Fees" if user.role == "student" else ("Stipend" if user.role == "intern" else "Payroll") }}
+            </a>
+            {% endif %}
+            <a href="{{ url_for('admin.employees' if user.role == 'employee' else ('admin.interns' if user.role == 'intern' else 'admin.students')) }}" 
+               class="bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-black transition shadow-lg shadow-slate-200">
+                Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{{ "Joining" if user.role != "student" else "Enrollment" }} Date</p>
+            <p class="text-lg font-black text-slate-800">{{ user.profile.joining_date.strftime('%b %d, %Y') }}</p>
+        </div>
+        <div class="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Department</p>
+            <p class="text-lg font-black text-slate-800">{{ user.profile.department|upper }}</p>
+        </div>
+        <div class="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Designation</p>
+            <p class="text-lg font-black text-slate-800">{{ user.profile.designation|upper }}</p>
+        </div>
+        <div class="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">System Access</p>
+            <p class="text-lg font-black {{ 'text-emerald-500' if user.is_active else 'text-rose-500' }}">
+                {{ 'ACTIVE' if user.is_active else 'INACTIVE' }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Calendar Card -->
+    <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8">
+        <div id='calendar'></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek'
+        },
+        events: "{{ url_for('admin.staff_attendance_events', user_id=user.id) }}",
+        eventTimeFormat: {
+            hour: 'numeric',
+            minute: '2-digit',
+            meridiem: 'short'
+        },
+        height: 'auto',
+        loading: function(isLoading) {
+            if (isLoading) {
+                calendarEl.style.opacity = '0.5';
+            } else {
+                calendarEl.style.opacity = '1';
+            }
+        }
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}

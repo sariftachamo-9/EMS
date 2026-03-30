@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Control Center Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8">
+    <div class="text-center mb-12">
+        <h3 class="text-3xl font-black text-slate-900 tracking-tight">Office Perimeter Settings</h3>
+        <p class="text-slate-500 font-medium">Configure geofencing and network verification parameters.</p>
+    </div>
+
+    <!-- Primary Office Settings -->
+    <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div class="px-10 pt-8 pb-4">
+            <h4 class="text-xs font-black uppercase text-slate-400 tracking-widest">Primary Office</h4>
+        </div>
+        <form method="POST" class="px-10 pb-10 space-y-8">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-3">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Office Latitude</label>
+                    <input type="number" step="any" name="latitude" id="primary-lat" value="{{ settings.latitude if settings else '27.7172' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                </div>
+                <div class="space-y-3">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Office Longitude</label>
+                    <input type="number" step="any" name="longitude" id="primary-lng" value="{{ settings.longitude if settings else '85.3240' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-3">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Allowed Radius (Meters)</label>
+                    <input type="number" name="radius" value="{{ settings.radius if settings else '150' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                </div>
+                <div class="space-y-3">
+                    <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Trusted Office IP</label>
+                    <input type="text" name="office_ip" value="{{ settings.office_ip if settings else '' }}" 
+                        class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner" 
+                        placeholder="e.g. 192.168.1.1">
+                </div>
+            </div>
+
+            <!-- Helper button to auto-fill current location -->
+            <button type="button" onclick="fillCurrentLocation()" 
+                class="text-xs font-bold text-orange-600 hover:text-orange-800 underline underline-offset-4 transition">
+                📍 Use My Current GPS Location as Office Coordinates
+            </button>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full bg-slate-900 text-white font-black py-5 rounded-[1.5rem] hover:bg-black transition-all duration-300 shadow-xl shadow-slate-200 uppercase tracking-[0.2em] text-xs">
+                    Apply Primary Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Geofence Info -->
+    <div class="bg-orange-50/50 p-8 rounded-3xl border border-orange-100 flex items-start space-x-6">
+        <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-orange-500 shadow-sm flex-shrink-0">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div>
+            <h4 class="text-sm font-black text-orange-900 mb-1">Geofence Logic</h4>
+            <p class="text-xs text-orange-700/70 leading-relaxed font-medium">Staff (employees, interns, students) must be connected to the <strong>Trusted Office IP</strong> OR be within the <strong>Allowed Radius</strong> of the primary office or any active secondary location to authorize QR login.</p>
+        </div>
+    </div>
+
+    <!-- Secondary Locations (AllowedLocations) -->
+    <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div class="px-10 pt-8 pb-4 flex items-center justify-between">
+            <div>
+                <h4 class="text-xs font-black uppercase text-slate-400 tracking-widest">Secondary / Branch Locations</h4>
+                <p class="text-sm text-slate-500 mt-1">Staff at these locations can also pass the geofence check.</p>
+            </div>
+        </div>
+
+        <!-- Existing locations table -->
+        <div class="px-10 pb-4">
+            {% if allowed_locations %}
+            <div class="space-y-3">
+                {% for loc in allowed_locations %}
+                <div class="flex items-center justify-between bg-slate-50 rounded-2xl px-6 py-4 border border-slate-100">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-2 h-2 rounded-full {{ 'bg-green-500' if loc.is_active else 'bg-slate-300' }}"></div>
+                        <div>
+                            <p class="text-sm font-bold text-slate-900">{{ loc.name }}</p>
+                            <p class="text-xs text-slate-400 font-medium">{{ loc.latitude }}, {{ loc.longitude }} &bull; {{ loc.radius }}m radius</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <!-- Toggle Active -->
+                        <form method="POST" action="{{ url_for('admin.toggle_allowed_location', loc_id=loc.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs font-bold px-3 py-1.5 rounded-xl transition
+                                {{ 'bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-700' if loc.is_active else 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700' }}">
+                                {{ 'Enabled' if loc.is_active else 'Disabled' }}
+                            </button>
+                        </form>
+                        <!-- Delete -->
+                        <form method="POST" action="{{ url_for('admin.delete_allowed_location', loc_id=loc.id) }}" class="inline" 
+                              onsubmit="return confirm('Remove {{ loc.name }} from allowed locations?')">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition">
+                                Remove
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-slate-400 font-medium text-center py-4 italic">No secondary locations configured yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- Add new location form -->
+        <form method="POST" action="{{ url_for('admin.add_allowed_location') }}" class="px-10 pb-10">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="border-t border-slate-100 pt-6 mt-2">
+                <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Add New Secondary Location</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <input type="text" name="name" placeholder="Location Name (e.g. Branch Office - Lalitpur)"
+                            class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                    </div>
+                    <div>
+                        <input type="number" step="any" name="latitude" id="sec-lat" placeholder="Latitude (e.g. 27.6778)"
+                            class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                    </div>
+                    <div>
+                        <input type="number" step="any" name="longitude" id="sec-lng" placeholder="Longitude (e.g. 85.3157)"
+                            class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                    </div>
+                    <div class="md:col-span-2">
+                        <input type="number" name="radius" placeholder="Allowed Radius in Meters (e.g. 150)" value="150"
+                            class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-orange-100 transition shadow-inner">
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mt-4">
+                    <button type="button" onclick="fillSecondaryLocation()" 
+                        class="text-xs font-bold text-orange-600 hover:text-orange-800 underline underline-offset-4 transition">
+                        📍 Use My Current GPS Location
+                    </button>
+                    <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-black py-3 px-8 rounded-2xl transition-all duration-300 text-xs uppercase tracking-widest shadow-md">
+                        + Add Location
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function fillCurrentLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation not supported by your browser.');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('primary-lat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('primary-lng').value = pos.coords.longitude.toFixed(6);
+    }, () => {
+        alert('Could not retrieve location. Please ensure GPS/location access is allowed.');
+    }, { enableHighAccuracy: true, timeout: 8000 });
+}
+
+function fillSecondaryLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation not supported by your browser.');
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('sec-lat').value = pos.coords.latitude.toFixed(6);
+        document.getElementById('sec-lng').value = pos.coords.longitude.toFixed(6);
+    }, () => {
+        alert('Could not retrieve location. Please ensure GPS/location access is allowed.');
+    }, { enableHighAccuracy: true, timeout: 8000 });
+}
+</script>
+{% endblock %}

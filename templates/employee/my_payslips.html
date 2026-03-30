@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-10 space-y-8">
+
+    <div>
+        <h1 class="text-3xl font-black text-slate-900 tracking-tight">{% if current_user.role == 'student' %}My Fee Records{% elif current_user.role == 'intern' %}My Stipends{% else %}My Payslips{% endif %}</h1>
+        <p class="text-slate-400 font-medium mt-1">View and download your monthly {% if current_user.role == 'student' %}fee invoices{% elif current_user.role == 'intern' %}stipend slips{% else %}salary statements{% endif %}.</p>
+    </div>
+
+    <!-- Salary Summary Card -->
+    {% if profile %}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center space-x-4">
+            <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">{% if current_user.role == 'student' %}Workshop Fee{% elif current_user.role == 'intern' %}Total Stipend{% else %}Annual Salary{% endif %}</p>
+                <p class="text-xl font-black text-slate-900">Rs.{{ "{:,.0f}".format(profile.base_salary) }}</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center space-x-4">
+            <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">{% if current_user.role == 'student' %}Paid Amount{% else %}Monthly Base{% endif %}</p>
+                <p class="text-xl font-black text-slate-900">Rs.{{ "{:,.0f}".format(profile.hra if current_user.role == 'student' else profile.base_salary / 12) }}</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex items-center space-x-4">
+            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            </div>
+            <div>
+                <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">{% if current_user.role == 'student' %}Remaining Balance{% else %}Overtime Rate{% endif %}</p>
+                <p class="text-xl font-black text-slate-900">{% if current_user.role == 'student' %}Rs.{{ "{:,.2f}".format((profile.base_salary or 0) - (profile.hra or 0)) }}{% else %}Rs.{{ "{:,.2f}".format(profile.overtime_rate) }}/hr{% endif %}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Payslip History -->
+    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="px-8 py-5 border-b border-slate-50">
+            <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">{% if current_user.role == 'student' %}Fee Archives{% elif current_user.role == 'intern' %}Stipend Archives{% else %}Payslip Archive{% endif %}</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-slate-50/40 border-b border-slate-50">
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Period</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Gross Pay</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Net Pay</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        <th class="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Document</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for payslip in payslips %}
+                    <tr class="hover:bg-slate-50/30 transition">
+                        <td class="px-8 py-5 text-sm font-bold text-slate-800">
+                            {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][payslip.month - 1] }} {{ payslip.year }}
+                        </td>
+                        <td class="px-8 py-5 text-sm font-bold text-slate-800">Rs.{{ "{:,.2f}".format(payslip.gross_pay or 0) }}</td>
+                        <td class="px-8 py-5">
+                            <p class="text-lg font-black text-slate-900">Rs.{{ "{:,.2f}".format(payslip.net_pay or 0) }}</p>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider {{ 'bg-emerald-50 text-emerald-600' if payslip.status == 'paid' else 'bg-amber-50 text-amber-600' }}">
+                                {{ payslip.status }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <a href="{{ url_for('staff.view_my_payslip', payroll_id=payslip.id) }}" target="_blank" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition shadow-md inline-flex items-center space-x-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                <span>View {% if current_user.role == 'student' %}Receipt{% elif current_user.role == 'intern' %}Stipend{% else %}Payslip{% endif %}</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-8 py-16 text-center">
+                            <p class="text-slate-300 font-black text-lg">No {% if current_user.role == 'student' %}fees{% elif current_user.role == 'intern' %}stipends{% else %}payslips{% endif %} generated yet.</p>
+                            <p class="text-slate-400 text-sm mt-1">Your records will appear here once admin processes them.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

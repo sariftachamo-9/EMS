@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto py-12 px-6">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden relative">
+        <!-- Top Header -->
+        <div class="bg-slate-900 p-8 text-center relative overflow-hidden">
+            <div class="relative z-10">
+                <h2 class="text-2xl font-black text-white tracking-tight uppercase">Badge Scanner</h2>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Secure Location Verification</p>
+            </div>
+            <!-- Decorative circle -->
+            <div class="absolute top-[-50px] right-[-50px] w-32 h-32 bg-orange-500/20 rounded-full blur-3xl"></div>
+        </div>
+
+        <!-- Scanner Content -->
+        <div class="p-8">
+            <div id="reader" class="rounded-[2rem] overflow-hidden border-4 border-slate-50 shadow-inner bg-slate-50 min-h-[300px] flex items-center justify-center relative">
+                <div id="scanner-placeholder" class="text-center p-6">
+                    <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 mx-auto mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                    </div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest leading-loose">Waiting for Camera Access...</p>
+                </div>
+            </div>
+
+            <!-- Status Indicator -->
+            <div id="status" class="mt-8 hidden">
+                <div class="bg-orange-50 border border-orange-100 p-4 rounded-2xl flex items-center space-x-4">
+                    <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-600"></div>
+                    <div>
+                        <p id="status-text" class="text-[11px] font-black text-orange-700 uppercase tracking-widest">Processing Badge...</p>
+                        <p id="status-detail" class="text-[10px] text-orange-600/70 font-bold mt-0.5">Capturing geolocation coordinates</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manual Entry (Fallback) -->
+            <div class="mt-8 text-center">
+                <p class="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Always Scan Official Badges Only</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Library -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script nonce="{{ csp_nonce() }}">
+    const html5QrCode = new Html5Qrcode("reader");
+    const statusDiv = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
+    const statusDetail = document.getElementById('status-detail');
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Stop scanning immediately to prevent multiple triggers
+        html5QrCode.stop().then(() => {
+            handleLoginFlow(decodedText);
+        });
+    }
+
+    async function handleLoginFlow(qrString) {
+        try {
+            statusDiv.classList.remove('hidden');
+            
+            let requestBody = {};
+            
+            // Step 1: Detect Format (JSON vs URL Token)
+            try {
+                // Try parsing as JSON (Legacy Support)
+                const userData = JSON.parse(qrString);
+                if (!userData.username || !userData.user_id) throw new Error("Invalid format");
+                
+                statusText.innerText = `Identity: ${userData.username}`;
+                requestBody = {
+                    username: userData.username,
+                    user_id: userData.user_id,
+                    role: userData.role
+                };
+            } catch (e) {
+                // If not JSON, see if it's a URL containing the token
+                // e.g., https://ems.com/qr/auto-login/<token>
+                if (qrString.includes('/auto-login/')) {
+                    const token = qrString.split('/auto-login/')[1];
+                    statusText.innerText = "Identity: Secure Token Linked";
+                    requestBody = { token: token };
+                } else {
+                    throw new Error("Unrecognized Badge Format");
+                }
+            }
+
+            statusDetail.innerText = "Requesting location permission...";
+
+            // Step 2 & 3: Geolocation
+            if (!navigator.geolocation) throw new Error("Geolocation not supported");
+            
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const { latitude, longitude } = position.coords;
+                
+                statusDetail.innerText = "Synchronizing with servers...";
+
+                // Add location and timestamp to request
+                requestBody.latitude = latitude;
+                requestBody.longitude = longitude;
+                requestBody.timestamp = new Date().toISOString();
+
+                // Step 4: POST to Backend
+                const response = await fetch('/qr/api/qr-login', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusText.innerText = "Access Granted";
+                    statusDetail.innerText = "Redirecting to dashboard...";
+                    setTimeout(() => window.location.href = result.redirect_url, 1500);
+                } else {
+                    throw new Error(result.message || "Login failed");
+                }
+            }, (error) => {
+                let msg = "Location Access Denied";
+                if (error.code === error.TIMEOUT) msg = "Location Request Timed Out";
+                showError(msg);
+            }, { enableHighAccuracy: true, timeout: 5000 });
+
+        } catch (e) {
+            showError(e.message);
+        }
+    }
+
+    function showError(msg) {
+        statusDiv.classList.remove('hidden');
+        statusDiv.querySelector('.bg-orange-50').classList.replace('bg-orange-50', 'bg-rose-50');
+        statusDiv.querySelector('.border-orange-100').classList.replace('border-orange-100', 'border-rose-100');
+        statusDiv.querySelector('div').innerHTML = `<svg class="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        statusText.innerText = "Anomaly Detected";
+        statusText.classList.replace('text-orange-700', 'text-rose-700');
+        statusDetail.innerText = msg;
+        statusDetail.classList.replace('text-orange-600/70', 'text-rose-600/70');
+        
+        // Restart scanner after 3 seconds
+        setTimeout(() => window.location.reload(), 3000);
+    }
+
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+</script>
+{% endblock %}

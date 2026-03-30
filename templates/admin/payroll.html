@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Payroll Management{% endblock %}
+
+{% block content %}
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="space-y-6">
+    
+    <!-- Generate Payroll Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <h3 class="text-lg font-bold text-slate-800 mb-4">Generate/Update Monthly Payroll</h3>
+        <form action="{{ url_for('admin.generate_payroll') }}" method="POST" class="flex items-end justify-between">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="w-1/3">
+                <label for="month" class="block text-xs font-semibold text-slate-500 mb-2">Select Month</label>
+                <input type="month" id="month" name="month" class="w-full text-sm border-0 border-b-2 border-slate-200 focus:ring-0 focus:border-orange-500 bg-transparent px-0 py-2 text-slate-700 placeholder-slate-400 font-medium transition" required>
+            </div>
+            <div>
+                <button type="submit" class="bg-[#e95a12] text-white px-6 py-2.5 rounded-lg font-bold text-sm hover:bg-orange-700 transition shadow-sm">
+                    Generate Payroll
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Salary Trend Line Chart -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Salary Expenditure Trend</h3>
+            <div class="relative h-64 w-full">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Dept Breakdown Doughnut Chart -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 relative">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Department-Wise Breakdown (Latest)</h3>
+            <div class="relative h-64 w-full flex items-center justify-center">
+                <div class="w-2/3 h-full pb-4">
+                    <canvas id="deptChart"></canvas>
+                </div>
+                <!-- Legend falls natively from ChartJS or custom, let's let Chart.js generate legend on right -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll History List -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+        <div class="p-6 border-b border-slate-50">
+            <h3 class="text-base font-bold text-slate-800">Payroll History</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-white border-b border-slate-100">
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Month</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Employees</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total Net Salary</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for p in history_data %}
+                    <tr class="hover:bg-slate-50/50 transition bg-white">
+                        <td class="px-6 py-5 text-sm font-bold text-slate-900">{{ p.month_str }}</td>
+                        <td class="px-6 py-5 text-sm text-slate-500">{{ p.employees }}</td>
+                        <td class="px-6 py-5 text-sm font-bold text-emerald-500">${{ "{:,.2f}".format(p.total_salary) }}</td>
+                        <td class="px-6 py-5">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 shadow-sm">
+                                {{ p.status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-5">
+                            <a href="{{ url_for('admin.payroll_batch', year=p.year, month=p.month) }}" class="text-sm font-bold text-orange-600 hover:text-orange-800">Manage</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-slate-500 text-sm">No payroll history found. Generate a batch to begin.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Line Chart (Salary Expenditure Trend)
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        const trendLabels = {{ trend_labels | tojson }};
+        const trendData = {{ trend_data | tojson }};
+        
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Total Net Salary',
+                    data: trendData,
+                    borderColor: '#5b58ff',
+                    backgroundColor: 'rgba(91, 88, 255, 0.1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#5b58ff',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                return ' $' + context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2});
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { font: { size: 10, family: "'Inter', sans-serif" }, color: '#94a3b8' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9', drawBorder: false },
+                        ticks: { font: { size: 10, family: "'Inter', sans-serif" }, color: '#94a3b8' }
+                    }
+                }
+            }
+        });
+
+        // Doughnut Chart (Department Breakdown)
+        const deptCtx = document.getElementById('deptChart').getContext('2d');
+        const deptLabels = {{ dept_labels | tojson }};
+        const deptData = {{ dept_data | tojson }};
+        
+        // Define specific colors to match the image: Blue, Emerald, Yellow/Orange, Red
+        const bgColors = [
+            '#5b5fc0', // Finance (blue)
+            '#0fb981', // HR (green)
+            '#f59e0b', // IT (yellow)
+            '#ef4444', // Marketing (red)
+            '#8b5cf6', // other
+            '#14b8a6'  // other
+        ];
+
+        new Chart(deptCtx, {
+            type: 'doughnut',
+            data: {
+                labels: deptLabels,
+                datasets: [{
+                    data: deptData,
+                    backgroundColor: bgColors,
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            padding: 20,
+                            font: { size: 10, family: "'Inter', sans-serif" },
+                            color: '#64748b'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Operational Intelligence{% endblock %}
+
+{% block content %}
+<div class="space-y-10" x-data="dashboardStats()">
+    <!-- Quick Actions Top Bar -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h3 class="text-2xl font-black text-slate-800 tracking-tight">System Overview</h3>
+            <p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time enterprise metrics</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <a href="{{ url_for('admin.add_employee') }}" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-100">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                <span>Add Employee</span>
+            </a>
+            <a href="{{ url_for('admin.add_intern') }}" class="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-orange-100">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                <span>Add Intern</span>
+            </a>
+            <a href="{{ url_for('admin.add_student') }}" class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-emerald-100">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path></svg>
+                <span>Add Student</span>
+            </a>
+            <a href="{{ url_for('admin.attendance') }}" class="flex items-center space-x-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-slate-100">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                <span>Attendance</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <!-- Total Employees -->
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Employees</span>
+            </div>
+            <h4 class="text-4xl font-black text-slate-800 tracking-tight" x-text="stats.total_employees">--</h4>
+            <p class="text-xs text-slate-400 font-bold mt-2 uppercase">Full-time Staff</p>
+        </div>
+
+        <!-- Attendance Today -->
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Attendance Today</span>
+            </div>
+            <h4 class="text-4xl font-black text-slate-800 tracking-tight" x-text="stats.attendance_today">--</h4>
+            <p class="text-xs text-emerald-500 font-bold mt-2 uppercase">Currently Logged In</p>
+        </div>
+
+        <!-- Pending Leaves -->
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Leaves</span>
+            </div>
+            <h4 class="text-4xl font-black text-slate-800 tracking-tight" x-text="stats.pending_leaves">--</h4>
+            <p class="text-xs text-orange-500 font-bold mt-2 uppercase tracking-tight">Requires Approval</p>
+        </div>
+
+        <!-- Total Interns -->
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path></svg>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Interns</span>
+            </div>
+            <h4 class="text-4xl font-black text-slate-800 tracking-tight" x-text="stats.total_interns">--</h4>
+            <p class="text-xs text-orange-600 font-bold mt-2 uppercase">Training</p>
+        </div>
+
+        <!-- Total Students -->
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition border-b-4 border-b-orange-400">
+            <div class="flex justify-between items-start mb-4">
+                <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Students</span>
+            </div>
+            <h4 class="text-4xl font-black text-slate-800 tracking-tight" x-text="stats.total_students">--</h4>
+            <p class="text-xs text-orange-500 font-bold mt-2 uppercase">Learning</p>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <!-- Doughnut Chart -->
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
+            <h4 class="text-lg font-black text-slate-800 mb-8 flex items-center">
+                <span class="w-2 h-6 bg-blue-500 rounded-full mr-3"></span>
+                Department Distribution
+            </h4>
+            <div class="h-[400px] flex justify-center">
+                <canvas id="deptChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Bar Chart -->
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <h4 class="text-lg font-black text-slate-800 mb-8 flex items-center">
+                <span class="w-2 h-6 bg-indigo-500 rounded-full mr-3"></span>
+                Leave Trends
+            </h4>
+            <div class="h-[400px] w-full">
+                <canvas id="leaveChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function dashboardStats() {
+    return {
+        stats: {
+            total_employees: 0,
+            total_interns: 0,
+            total_students: 0,
+            attendance_today: 0,
+            pending_leaves: 0,
+            dept_labels: [],
+            dept_values: [],
+            trend_labels: [],
+            leave_trends: []
+        },
+        deptChart: null,
+        leaveChart: null,
+
+        init() {
+            this.fetchStats();
+            setInterval(() => this.fetchStats(), 60000); // 1m Polling
+        },
+
+        fetchStats() {
+            fetch('/admin/api/stats')
+                .then(r => r.json())
+                .then(data => {
+                    this.stats = data;
+                    this.updateCharts();
+                });
+        },
+
+        updateCharts() {
+            // Dept Chart
+            if (!this.deptChart) {
+                this.deptChart = new Chart(document.getElementById('deptChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: this.stats.dept_labels,
+                        datasets: [{
+                            data: this.stats.dept_values,
+                            backgroundColor: ['#00a3ff', '#6366f1', '#10b981', '#f97316', '#f43f5e'],
+                            borderWidth: 0,
+                            hoverOffset: 30
+                        }]
+                    },
+                    options: {
+                        cutout: '65%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { family: 'Inter', weight: '800', size: 12 },
+                                    padding: 30,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                this.deptChart.data.labels = this.stats.dept_labels;
+                this.deptChart.data.datasets[0].data = this.stats.dept_values;
+                this.deptChart.update();
+            }
+
+            // Leave Chart
+            if (!this.leaveChart) {
+                this.leaveChart = new Chart(document.getElementById('leaveChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: this.stats.trend_labels,
+                        datasets: [{
+                            label: 'Leaves Taken',
+                            data: this.stats.leave_trends,
+                            backgroundColor: '#00a3ff',
+                            borderRadius: 12,
+                            barThickness: 40
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#f1f5f9', drawBorder: false },
+                                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+            } else {
+                this.leaveChart.data.labels = this.stats.trend_labels;
+                this.leaveChart.data.datasets[0].data = this.stats.leave_trends;
+                this.leaveChart.update();
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

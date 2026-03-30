@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Support & Queries{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <div class="flex justify-between items-center">
+        <div>
+            <h3 class="text-xl font-bold text-slate-800">Employee Queries</h3>
+            <p class="text-sm text-slate-500">Manage support tickets and feedback from staff.</p>
+        </div>
+        <div class="bg-blue-50 text-blue-600 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider border border-blue-100">
+            {{ queries|length }} Total Tickets
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+        {% for query in queries %}
+        <div class="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition group overflow-hidden relative">
+            <div class="flex justify-between items-start mb-6">
+                <div class="flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-bold text-slate-800">{{ "Anonymous Staff" if query.is_anonymous else query.name }}</h4>
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">{{ query.category }} • {{ query.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-100">
+                        {{ query.priority }}
+                    </span>
+                    <span class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest 
+                        {% if query.status == 'open' %}bg-blue-50 text-blue-600 border-blue-100
+                        {% elif query.status == 'resolved' %}bg-emerald-50 text-emerald-600 border-emerald-100
+                        {% else %}bg-slate-100 text-slate-500 border-slate-200{% endif %} border">
+                        {{ query.status }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="bg-slate-50/50 p-6 rounded-2xl border border-slate-50 mb-6">
+                <p class="text-sm text-slate-600 leading-relaxed font-medium">"{{ query.message }}"</p>
+            </div>
+
+            <form action="{{ url_for('admin.update_query', query_id=query.id) }}" method="POST" class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black uppercase text-slate-400">Update Status</label>
+                    <select name="status" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-[11px] font-bold text-slate-700">
+                        <option value="open" {% if query.status == 'open' %}selected{% endif %}>Open</option>
+                        <option value="in-progress" {% if query.status == 'in-progress' %}selected{% endif %}>In Progress</option>
+                        <option value="resolved" {% if query.status == 'resolved' %}selected{% endif %}>Resolved</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black uppercase text-slate-400">Set Priority</label>
+                    <select name="priority" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-[11px] font-bold text-slate-700">
+                        <option value="low" {% if query.priority|lower == 'low' %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if query.priority|lower == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if query.priority|lower == 'high' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <button type="submit" class="w-full bg-slate-900 text-white px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-black transition shadow-md">Apply Changes</button>
+                </div>
+            </form>
+        </div>
+        {% else %}
+        <div class="bg-white p-20 rounded-[2rem] border border-dashed border-slate-200 text-center">
+            <p class="text-slate-400 font-bold">No queries found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

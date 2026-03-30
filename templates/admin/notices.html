@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block admin_title %}System Notices{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-10">
+    <!-- Notice Creator -->
+    <div class="lg:col-span-1 space-y-8">
+        <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8">
+            <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center">
+                <svg class="w-5 h-5 mr-3 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.167H3.3a1.598 1.598 0 01-1.558-1.558V9.117a1.598 1.598 0 011.558-1.558h1.134l2.147-6.167a1.76 1.76 0 013.417.592v13.355"></path></svg>
+                Post New Notice
+            </h3>
+            
+            <form method="POST" class="space-y-6">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Title</label>
+                    <input type="text" name="title" required placeholder="Important System Update" 
+                        class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-900 focus:ring-2 focus:ring-orange-100 transition">
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Content</label>
+                    <textarea name="content" required rows="4" placeholder="Type your announcement here..." 
+                        class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-orange-100 transition"></textarea>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Visibility</label>
+                    <select name="role" class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-700">
+                        <option value="all">Everyone</option>
+                        <option value="employee">Staff Only</option>
+                        <option value="intern">Interns Only</option>
+                        <option value="student">Students Only</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl hover:bg-black transition shadow-lg uppercase tracking-widest text-[10px]">
+                    Broadcast Notice
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Active Notices -->
+    <div class="lg:col-span-2 space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 class="text-xl font-bold text-slate-800 flex items-center">
+                Active Feed
+                <span class="ml-4 px-2.5 py-1 bg-orange-100 text-orange-600 rounded-lg text-[10px] font-black">LIVE</span>
+            </h3>
+            
+            <form method="GET" class="relative group w-full md:w-64">
+                <input type="text" name="search" value="{{ curr_search }}" placeholder="Search notices..." 
+                    class="w-full bg-white border border-slate-200 rounded-xl px-10 py-2.5 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-orange-100 focus:border-orange-400 transition shadow-sm">
+                <svg class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 group-focus-within:text-orange-500 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </form>
+        </div>
+        
+        <div class="space-y-6">
+            {% for notice in notices %}
+            <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 p-8 hover:border-orange-200 transition-all group">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                            {{ notice.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </span>
+                        <h4 class="text-lg font-bold text-slate-800 group-hover:text-orange-600 transition">{{ notice.title }}</h4>
+                    </div>
+                    <span class="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                        To: {{ notice.role_restriction|upper }}
+                    </span>
+                </div>
+                <p class="text-[13px] text-slate-500 leading-relaxed font-medium">
+                    {{ notice.content }}
+                </p>
+                <div class="mt-6 flex items-center justify-end">
+                    <form action="{{ url_for('admin.delete_notice', notice_id=notice.id) }}" method="POST" onsubmit="return confirm('Delete this notice? This action cannot be undone.')">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="text-[10px] font-bold text-rose-400 hover:text-rose-600 transition uppercase tracking-widest">Delete Broadcast</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-20 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200">
+                <p class="text-slate-400 font-bold">No announcements have been made yet.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

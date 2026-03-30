@@ -1,0 +1,922 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen flex bg-white" style="font-family: 'Inter', sans-serif;">
+
+    <!-- ===== LEFT PANEL: Brand Hero ===== -->
+    <div class="hidden md:flex w-1/2 relative overflow-hidden items-center justify-center" style="background: radial-gradient(circle at 20% 20%, rgba(255,140,0,0.25) 0%, rgba(255,255,255,0.0) 55%),
+                            radial-gradient(circle at 80% 85%, rgba(32,178,100,0.22) 0%, rgba(255,255,255,0.0) 55%),
+                            #f5f8f5;">
+        <!-- Soft blobs -->
+        <div
+            style="position:absolute;top:-8%;left:-8%;width:460px;height:460px;background:radial-gradient(circle,rgba(255,120,0,0.20),transparent 70%);border-radius:50%;filter:blur(50px);animation:pulse 4s ease-in-out infinite;">
+        </div>
+        <div
+            style="position:absolute;bottom:-8%;right:-8%;width:460px;height:460px;background:radial-gradient(circle,rgba(32,178,100,0.18),transparent 70%);border-radius:50%;filter:blur(50px);">
+        </div>
+
+        <div
+            style="position:relative;z-index:10;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Global IOT Nepal Logo"
+                style="width:100%;max-width:550px;object-fit:contain;filter:drop-shadow(0 12px 40px rgba(0,0,0,0.13)); transform: translateY(-4rem);"
+                onerror="this.style.display='none'">
+
+        </div>
+    </div>
+
+    <!-- ===== RIGHT PANEL: Login Form ===== -->
+    <div class="w-full md:w-1/2 flex items-center justify-center bg-white" style="padding:3rem 4rem;">
+        <div style="width:100%;max-width:420px;">
+
+            <!-- Mobile logo -->
+            <div class="md:hidden" style="text-align:center;margin-bottom:2rem;">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo"
+                    style="height:80px;margin:0 auto;display:block;">
+            </div>
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-message" style="padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 10px; font-size: 0.875rem; font-weight: 600; 
+                            background: {{ '#ecfdf5' if category == 'success' else '#fff7ed' }}; 
+                            color: {{ '#065f46' if category == 'success' else '#9a3412' }}; 
+                            border: 1px solid {{ '#a7f3d0' if category == 'success' else '#fcd9a1' }}; transition: all 0.5s ease;">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <!-- Heading -->
+            <div style="margin-bottom:1.5rem;">
+                <h2 style="font-size:1.8rem;font-weight:800;color:#111827;letter-spacing:-0.03em;margin:0 0 0.2rem;">
+                    Welcome Back</h2>
+                <p style="color:#6b7280;font-size:0.9rem;margin:0;">Please enter your details to sign in.</p>
+            </div>
+
+            <!-- ===== Bypass Banner ===== -->
+            <div id="admin-bypass-banner"
+                style="display:none;align-items:center;justify-content:space-between;gap:0.75rem;background:rgba(16,185,129,0.04);border:1.5px solid #10b981;border-radius:10px;padding:0.7rem 1rem;margin-bottom:1.25rem;">
+                <div style="display:flex;align-items:center;gap:0.6rem;min-width:0;flex-shrink:1;">
+                    <svg style="width:18px;height:18px;flex-shrink:0;color:#10b981;" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                        </path>
+                    </svg>
+                    <div>
+                        <div id="bypass-title"
+                            style="font-size:0.65rem;font-weight:800;color:#10b981;letter-spacing:0.06em;text-transform:uppercase;line-height:1.2;">
+                            BYPASS ACTIVE</div>
+                        <div id="bypass-text" style="font-size:0.6rem;font-weight:500;color:#34d399;margin-top:1px;">
+                            Location verification is currently disabled.</div>
+                    </div>
+                </div>
+                <div id="bypass-pill"
+                    style="flex-shrink:0;background:#10b981;color:white;font-size:0.62rem;font-weight:800;padding:0.4rem 0.75rem;border-radius:7px;display:flex;align-items:center;gap:5px;letter-spacing:0.04em;white-space:nowrap;">
+                    Bypass Active
+                </div>
+            </div>
+
+            <!-- ===== Location Required Banner ===== -->
+            <div id="location-banner"
+                style="display:none;flex-direction:column;gap:0.6rem;background:rgba(234,88,12,0.04);border:1.5px solid #ea580c;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.25rem;">
+                <!-- Top Row: Icon + Text + Button -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+                    <div style="display:flex;align-items:center;gap:0.6rem;min-width:0;flex-shrink:1;">
+                        <svg id="range-icon" style="width:18px;height:18px;flex-shrink:0;color:#ea580c;" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        <div>
+                            <div id="range-text"
+                                style="font-size:0.65rem;font-weight:800;color:#ea580c;letter-spacing:0.06em;text-transform:uppercase;line-height:1.2;">
+                                VERIFY YOUR LOCATION</div>
+                            <div id="range-subtext"
+                                style="font-size:0.6rem;font-weight:500;color:#c2410c;margin-top:1px;">You need to be inside the office for login.</div>
+                        </div>
+                    </div>
+                    <!-- GPS Status Pill -->
+                    <span id="gps-status-pill"
+                        style="flex-shrink:0;font-size:0.6rem;font-weight:800;padding:0.3rem 0.65rem;border-radius:20px;letter-spacing:0.04em;background:#f3f4f6;color:#9ca3af;">CHECKING...</span>
+                </div>
+
+
+
+                <button type="button" id="verifyLocBtn"
+                    style="width:100%;background:#ea580c;color:white;font-size:0.7rem;font-weight:800;padding:0.55rem 0.9rem;border:none;border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:background 0.2s;letter-spacing:0.03em;">
+                    <svg style="width:13px;height:13px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h2M4 8h2m1-4h1m15 1h1M4 20h.01M4 16h.01M4 12h.01M4 8h.01M4 4h.01">
+                        </path>
+                    </svg>
+                    Verify Location via QR
+                </button>
+            </div>
+
+            <div id="role-tabs" class="role-tabs-container">
+                <button type="button" id="tab-admin" class="role-tab {% if selected_role == 'admin' or not selected_role %}role-tab--active{% endif %}">
+                    Admin
+                </button>
+                <button type="button" id="tab-employee" class="role-tab {% if selected_role == 'employee' %}role-tab--active{% endif %}">
+                    Employee
+                </button>
+                <button type="button" id="tab-student" class="role-tab {% if selected_role == 'student' %}role-tab--active{% endif %}">
+                    Student
+                </button>
+                <button type="button" id="tab-intern" class="role-tab {% if selected_role == 'intern' %}role-tab--active{% endif %}">
+                    Intern
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form method="POST" action="{{ url_for('auth.login') }}" id="login-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="role" id="selected_role" value="{{ selected_role or 'admin' }}">
+                <input type="hidden" name="location_verified" id="location_verified" value="false">
+
+                <!-- Email -->
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block;font-size:0.78rem;font-weight:600;color:#374151;margin-bottom:0.5rem;">
+                        User Email
+                    </label>
+                    <input type="email" name="email" id="email_input" required
+                        class="portal-input" placeholder="admin@ems.com" pattern="[a-zA-Z0-9._%+-]+@ems\.com$"
+                        title="Email must be admin@ems.com or follow the format name-depart@ems.com">
+                </div>
+
+                <!-- Password -->
+                <div style="margin-bottom:1.25rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                        <label style="font-size:0.78rem;font-weight:600;color:#374151;">
+                            Password
+                        </label>
+                        <a href="{{ url_for('auth.forgot_password') }}"
+                            style="font-size:0.82rem;font-weight:700;color:#e65c00;text-decoration:none;"
+                            onmouseover="this.style.color='#c44d00'" onmouseout="this.style.color='#e65c00'">
+                            Forgot?
+                        </a>
+                    </div>
+
+                    <div style="position:relative;">
+                        <input type="password" name="password" id="password_input" required placeholder="••••••••"
+                            class="portal-input" style="padding-right: 2.75rem;">
+                        <button type="button" id="togglePasswordBtn"
+                            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;padding:0;">
+                            <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <svg id="eyeSlashIcon" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="18"
+                                height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                                </path>
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Password Strength Meter -->
+                    <div
+                        style="margin-top:0.75rem;background:#fafafa;border:1px solid #f3f4f6;border-radius:8px;padding:1rem;">
+                        <div
+                            style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                            <span style="font-size:0.7rem;font-weight:800;color:#6b7280;letter-spacing:0.05em;">SECURITY
+                                STRENGTH</span>
+                            <span id="strengthText" style="font-size:0.7rem;font-weight:800;color:#9ca3af;">Weak</span>
+                        </div>
+                        <div style="display:flex;gap:4px;margin-bottom:1rem;">
+                            <div class="strength-segment"
+                                style="flex:1;height:4px;border-radius:2px;background:#e5e7eb;"></div>
+                            <div class="strength-segment"
+                                style="flex:1;height:4px;border-radius:2px;background:#e5e7eb;"></div>
+                            <div class="strength-segment"
+                                style="flex:1;height:4px;border-radius:2px;background:#e5e7eb;"></div>
+                            <div class="strength-segment"
+                                style="flex:1;height:4px;border-radius:2px;background:#e5e7eb;"></div>
+                            <div class="strength-segment"
+                                style="flex:1;height:4px;border-radius:2px;background:#e5e7eb;"></div>
+                        </div>
+                        <div style="font-size:0.7rem;color:#9ca3af;display:flex;flex-direction:column;gap:0.4rem;">
+                            <div class="strength-req" id="req-length" style="display:flex;align-items:center;">
+                                <svg class="req-icon" style="width:14px;height:14px;margin-right:6px;visibility:hidden"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                Minimum 8 characters
+                            </div>
+                            <div class="strength-req" id="req-upper" style="display:flex;align-items:center;">
+                                <svg class="req-icon" style="width:14px;height:14px;margin-right:6px;visibility:hidden"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                At least one uppercase letter
+                            </div>
+                            <div class="strength-req" id="req-lower" style="display:flex;align-items:center;">
+                                <svg class="req-icon" style="width:14px;height:14px;margin-right:6px;visibility:hidden"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                At least one lowercase letter
+                            </div>
+                            <div class="strength-req" id="req-num" style="display:flex;align-items:center;">
+                                <svg class="req-icon" style="width:14px;height:14px;margin-right:6px;visibility:hidden"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                At least one number
+                            </div>
+                            <div class="strength-req" id="req-spec" style="display:flex;align-items:center;">
+                                <svg class="req-icon" style="width:14px;height:14px;margin-right:6px;visibility:hidden"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                At least one special character
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sign In Button -->
+                <button type="submit" id="signInBtn"
+                    style="width:100%;padding:0.9rem;background:#ea580c;color:#fff;font-size:0.95rem;font-weight:700;border:none;border-radius:10px;cursor:pointer;transition:all .2s;letter-spacing:0.01em;">
+                    Sign In
+                </button>
+                <div id="signin-required-text"
+                    style="text-align:center;margin-top:0.4rem;font-size:0.6rem;font-weight:800;color:#9ca3af;letter-spacing:0.08em;display:none;text-transform:uppercase;">
+                    LOCATION VERIFICATION REQUIRED
+                </div>
+            </form>
+
+            <!-- QR Verification Modal -->
+            <div id="qr-verification-area"
+                style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+                <div
+                    style="background:white;padding:2rem;border-radius:15px;text-align:center;max-width:320px;width:90%;box-shadow:0 15px 40px rgba(0,0,0,0.2);">
+                    <h3 style="font-size:1.25rem;font-weight:900;color:#ea580c;margin:0 0 0.5rem;">Verify Location</h3>
+                    <p style="font-size:0.85rem;color:#64748b;margin-bottom:1.5rem;line-height:1.4;">Scan this dynamic
+                        QR with your mobile device to validate your GPS location.</p>
+
+                    <div
+                        style="background:#f8fafc;padding:15px;display:inline-block;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:1.25rem;">
+                        <img id="qr-code-display" src="" alt="QR Code" style="width:150px;height:150px;display:block;">
+                    </div>
+
+                    <div id="verification-status"
+                        style="font-size:0.75rem;font-weight:900;color:#ea580c;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:0.25rem;">
+                        WAITING FOR SCAN...</div>
+                    <div id="qr-timer" style="font-size:0.65rem;font-weight:700;color:#64748b;margin-bottom:1.5rem;display:none;">
+                        QR rotates in: <span id="timer-count">60</span>s</div>
+
+                    <button type="button" id="closeQRModalBtn"
+                        style="width:100%;padding:0.85rem;background:#f1f5f9;color:#475569;border:none;border-radius:10px;font-size:0.85rem;font-weight:800;cursor:pointer;transition:background 0.2s;"
+                        onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                        Cancel Verification
+                    </button>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div style="position:relative;margin:1.75rem 0;text-align:center;">
+                <div style="position:absolute;top:50%;left:0;right:0;height:1px;background:#f0f0f0;"></div>
+                <span
+                    style="position:relative;background:#fff;padding:0 0.75rem;font-size:0.72rem;color:#9ca3af;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;">
+                    Or help with account
+                </span>
+            </div>
+
+            <!-- Contact Admin Support -->
+            <a href="{{ url_for('contact.display_contact') }}"
+                style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;padding:0.85rem 1rem;border:1.5px solid #e5e7eb;border-radius:10px;color:#374151;font-size:0.88rem;font-weight:700;text-decoration:none;transition:background .2s;"
+                onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#ffffff'">
+                <svg style="width:18px;height:18px;margin-right:10px;" fill="none" stroke="#e65c00" stroke-width="2"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contact Admin Support
+            </a>
+
+            <!-- Register Link -->
+            <p style="text-align:center;margin-top:1.25rem;font-size:0.875rem;color:#6b7280;">
+                Don't have an account?
+                <a href="{{ url_for('contact.contact') }}" style="color:#e65c00;font-weight:700;text-decoration:none;"
+                    onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                    Request Access
+                </a>
+            </p>
+
+
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.6;
+        }
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .opacity-25 {
+        opacity: 0.25;
+    }
+
+    .opacity-75 {
+        opacity: 0.75;
+    }
+
+    #signInBtn:disabled {
+        cursor: not-allowed;
+        opacity: 1;
+    }
+
+    /* Flash Message Animation */
+    @keyframes fadeOutUp {
+        0% {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        100% {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+    }
+
+    .flash-message.fade-out {
+        animation: fadeOutUp 0.6s ease forwards;
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    /* ── Role Tab Buttons (responsive) ─────────────────────────────── */
+    .role-tabs-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        background: #f3f4f6;
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 1.5rem;
+    }
+
+    .role-tab {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 0.6rem 0.25rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #6b7280;
+        background: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        letter-spacing: 0.02em;
+        transition: all 0.2s;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        text-align: center;
+    }
+
+    .role-tab--active {
+        color: #e65c00;
+        background: #fff;
+        font-weight: 800;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* On very small screens (< 380px) stack into a 2×2 grid */
+    @media (max-width: 380px) {
+        .role-tabs-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+
+        .role-tab {
+            padding: 0.5rem 0.25rem;
+            font-size: 0.68rem;
+        }
+    }
+
+    .portal-input {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.82rem 1rem;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        color: #111827;
+        background: #f8fafc;
+        outline: none;
+        transition: box-shadow .2s, border-color .2s;
+    }
+
+    .portal-input:focus {
+        box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
+        border-color: #ea580c;
+    }
+</style>
+
+<script nonce="{{ csp_nonce() }}">
+    let verificationPollInterval = null;
+    let rotationCountdownInterval = null;
+    let secondsLeft = 60;
+
+    // Device detection
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    function selectRole(role) {
+        const tabs = ['admin', 'employee', 'student', 'intern'];
+        const roleInputField = document.getElementById('selected_role');
+        const emailInputField = document.getElementById('email_input');
+        const bannerLoc = document.getElementById('location-banner');
+        const bypassBannerAdmin = document.getElementById('admin-bypass-banner');
+        const btnSignIn = document.getElementById('signInBtn');
+        const textSigninReq = document.getElementById('signin-required-text');
+        const inputLocationVerified = document.getElementById('location_verified');
+        const btnVerifyLoc = document.getElementById('verifyLocBtn');
+
+        if (roleInputField) roleInputField.value = role;
+
+        // Toggle Active Classes
+        tabs.forEach(t => {
+            const btnTab = document.getElementById(`tab-${t}`);
+            if (btnTab) {
+                if (t === role) {
+                    btnTab.classList.add('role-tab--active');
+                } else {
+                    btnTab.classList.remove('role-tab--active');
+                }
+            }
+        });
+
+        // Update Placeholder
+        if (emailInputField) {
+            emailInputField.placeholder = (role === 'admin') ? 'admin@ems.com' : 'name-depart@ems.com';
+        }
+
+        // Initial Visibility Logic (Immediate)
+        const needsLoc = (role !== 'admin');
+        const isLocVerified = inputLocationVerified ? (inputLocationVerified.value === 'true') : false;
+
+        if (needsLoc) {
+            if (bannerLoc && !isLocVerified) bannerLoc.style.display = 'flex';
+            if (bypassBannerAdmin) bypassBannerAdmin.style.display = 'none';
+            if (btnVerifyLoc && !isLocVerified) btnVerifyLoc.style.display = 'flex';
+            if (textSigninReq && !isLocVerified) textSigninReq.style.display = 'block';
+
+            if (btnSignIn) {
+                btnSignIn.disabled = !isLocVerified;
+                btnSignIn.style.background = isLocVerified ? '#ea580c' : '#f1f5f9';
+                btnSignIn.style.color = isLocVerified ? '#fff' : '#94a3b8';
+                btnSignIn.style.cursor = isLocVerified ? 'pointer' : 'not-allowed';
+            }
+        } else {
+            // Admin role bypass UI
+            if (bannerLoc) bannerLoc.style.display = 'none';
+            if (bypassBannerAdmin) bypassBannerAdmin.style.display = 'flex';
+            if (btnVerifyLoc) btnVerifyLoc.style.display = 'none';
+            if (textSigninReq) textSigninReq.style.display = 'none';
+
+            if (btnSignIn) {
+                btnSignIn.disabled = false;
+                btnSignIn.style.background = '#ea580c';
+                btnSignIn.style.color = '#fff';
+                btnSignIn.style.cursor = 'pointer';
+            }
+        }
+
+        // Trigger dynamic bypass check from server
+        checkEmailBypass();
+    }
+
+    function startRotationTimer() {
+        if (rotationCountdownInterval) clearInterval(rotationCountdownInterval);
+        secondsLeft = 60;
+        const timerContainer = document.getElementById('qr-timer');
+        const countSpan = document.getElementById('timer-count');
+        
+        if (timerContainer) timerContainer.style.display = 'block';
+        if (countSpan) countSpan.textContent = secondsLeft;
+
+        rotationCountdownInterval = setInterval(() => {
+            secondsLeft--;
+            if (countSpan) countSpan.textContent = secondsLeft;
+
+            if (secondsLeft <= 0) {
+                clearInterval(rotationCountdownInterval);
+                // Fetch fresh token
+                startLocationVerification(true);
+            }
+        }, 1000);
+    }
+
+    async function startLocationVerification(isRotation = false) {
+        const verifyBtn = document.getElementById('verifyLocBtn');
+        const originalText = verifyBtn ? verifyBtn.innerHTML : 'Verify Location via QR';
+
+        try {
+            if (!isRotation && verifyBtn) {
+                verifyBtn.disabled = true;
+                verifyBtn.innerHTML = 'Generating...';
+            }
+
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            const response = await fetch('/qr/api/generate-loc-token', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                const qrImg = document.getElementById('qr-code-display');
+                if (qrImg) {
+                    qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(data.verify_url)}`;
+                }
+
+                document.getElementById('qr-verification-area').style.display = 'flex';
+                const statusEl = document.getElementById('verification-status');
+                if (statusEl) {
+                    statusEl.textContent = isRotation ? 'TOKEN ROTATED - WAITING...' : 'Waiting for Scan...';
+                    statusEl.style.color = '#ea580c';
+                }
+
+                // Start or Restart Rotation Timer
+                startRotationTimer();
+
+                // Start or Restart Polling
+                pollLocationStatus(data.token);
+            }
+        } catch (err) {
+            if (!isRotation) alert('Failed to start verification. Please check your connection.');
+        } finally {
+            if (!isRotation && verifyBtn) {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = originalText;
+            }
+        }
+    }
+
+    function pollLocationStatus(token) {
+        if (verificationPollInterval) clearInterval(verificationPollInterval);
+
+        verificationPollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/qr/api/check-loc-status/${token}`);
+                const data = await response.json();
+
+                const statusEl = document.getElementById('verification-status');
+
+                if (data.status === 'verified') {
+                    clearInterval(verificationPollInterval);
+                    completeLocationVerification();
+                } else if (data.status === 'expired') {
+                    clearInterval(verificationPollInterval);
+                    statusEl.textContent = 'TOKEN EXPIRED';
+                    statusEl.style.color = '#ef4444';
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+            }
+        }, 2000);
+    }
+
+    function completeLocationVerification() {
+        // Stop Timers
+        if (verificationPollInterval) clearInterval(verificationPollInterval);
+        if (rotationCountdownInterval) clearInterval(rotationCountdownInterval);
+        
+        // Success State
+        const modal = document.getElementById('qr-verification-area');
+        if (modal) modal.style.display = 'none';
+        
+        const locInputField = document.getElementById('location_verified');
+        if (locInputField) locInputField.value = 'true';
+
+        // Update Banner
+        const banner = document.getElementById('location-banner');
+        if (banner) {
+            banner.style.background = 'rgba(16,185,129,0.04)';
+            banner.style.borderColor = '#10b981';
+        }
+
+        const rangeIcon = document.getElementById('range-icon');
+        if (rangeIcon) rangeIcon.style.color = '#10b981';
+        
+        const rangeText = document.getElementById('range-text');
+        if (rangeText) {
+            rangeText.textContent = 'LOCATION VERIFIED';
+            rangeText.style.color = '#10b981';
+        }
+        
+        const rangeSubtext = document.getElementById('range-subtext');
+        if (rangeSubtext) {
+            rangeSubtext.textContent = 'You are verified at the Office location.';
+            rangeSubtext.style.color = '#059669';
+        }
+
+        const verifyBtn = document.getElementById('verifyLocBtn');
+        if (verifyBtn) verifyBtn.style.display = 'none';
+        
+        const reqText = document.getElementById('signin-required-text');
+        if (reqText) reqText.style.display = 'none';
+
+        // Unlock Sign In
+        const signInBtn = document.getElementById('signInBtn');
+        if (signInBtn) {
+            signInBtn.disabled = false;
+            signInBtn.style.background = '#ea580c';
+            signInBtn.style.color = '#fff';
+            signInBtn.style.cursor = 'pointer';
+        }
+    }
+
+    function closeQRModal() {
+        const modal = document.getElementById('qr-verification-area');
+        if (modal) modal.style.display = 'none';
+        if (verificationPollInterval) clearInterval(verificationPollInterval);
+        if (rotationCountdownInterval) clearInterval(rotationCountdownInterval);
+    }
+
+    async function checkEmailBypass() {
+        const emailInput = document.getElementById('email_input');
+        const roleInput = document.getElementById('selected_role');
+        if (!emailInput || !roleInput) return;
+
+        const email = emailInput.value;
+        const role = roleInput.value;
+
+        try {
+            const response = await fetch('/qr/api/check-bypass-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email || null,
+                    role: role
+                })
+            });
+            const data = await response.json();
+
+            const bypassBanner = document.getElementById('admin-bypass-banner');
+            const locBanner = document.getElementById('location-banner');
+            const signinReqText = document.getElementById('signin-required-text');
+            const signInBtn = document.getElementById('signInBtn');
+            const bypassTitle = document.getElementById('bypass-title');
+            const bypassText = document.getElementById('bypass-text');
+            const bypassPill = document.getElementById('bypass-pill');
+
+            // Admins skip loc requirements anyway
+            if (role === 'admin' || data.has_bypass) {
+                bypassBanner.style.display = 'flex';
+                locBanner.style.display = 'none';
+                signinReqText.style.display = 'none';
+
+                signInBtn.disabled = false;
+                signInBtn.style.background = '#ea580c';
+                signInBtn.style.color = '#fff';
+                signInBtn.style.cursor = 'pointer';
+
+                if (data.reason === 'office_ip') {
+                    bypassTitle.textContent = 'OFFICE NETWORK VERIFIED';
+                    bypassText.textContent = 'You are connected via the trusted office network.';
+                    bypassPill.textContent = 'Secure Network';
+                    bypassPill.style.background = '#059669';
+                } else if (data.reason === 'admin') {
+                    bypassTitle.textContent = 'ADMIN BYPASS';
+                    bypassText.textContent = 'Location verification is exempt for administrators.';
+                    bypassPill.textContent = 'Admin Exempt';
+                    bypassPill.style.background = '#10b981';
+                } else if (data.reason === 'temporary') {
+                    bypassTitle.textContent = 'TEMPORARY BYPASS';
+                    bypassText.textContent = 'An administrator has granted you a temporary bypass.';
+                    bypassPill.textContent = 'Bypass Active';
+                    bypassPill.style.background = '#10b981';
+                }
+            } else {
+                // No bypass found
+                if (bypassBanner) bypassBanner.style.display = 'none';
+                if (locBanner) locBanner.style.display = 'flex';
+                if (signinReqText) signinReqText.style.display = 'block';
+
+                const locationVerifiedInput = document.getElementById('location_verified');
+                const loginVerified = locationVerifiedInput ? (locationVerifiedInput.value === 'true') : false;
+                
+                if (signInBtn) {
+                    signInBtn.disabled = !loginVerified;
+                    signInBtn.style.background = loginVerified ? '#ea580c' : '#f1f5f9';
+                    signInBtn.style.color = loginVerified ? '#fff' : '#94a3b8';
+                    signInBtn.style.cursor = loginVerified ? 'pointer' : 'not-allowed';
+                }
+                
+                // If we are verified but for some reason not in bypass mode, ensure btn is visible
+                const verifyBtn = document.getElementById('verifyLocBtn');
+                if (loginVerified) {
+                    if (verifyBtn) verifyBtn.style.display = 'none';
+                    if (signinReqText) signinReqText.style.display = 'none';
+                } else {
+                    if (verifyBtn) verifyBtn.style.display = 'flex';
+                    if (signinReqText) signinReqText.style.display = 'block';
+                }
+            }
+        } catch (err) {
+            console.error('Bypass check error:', err);
+        }
+    }
+
+    function togglePasswordVisibility() {
+        const input = document.getElementById('password_input');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const eyeSlashIcon = document.getElementById('eyeSlashIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            eyeIcon.style.display = 'none';
+            eyeSlashIcon.style.display = 'block';
+        } else {
+            input.type = 'password';
+            eyeIcon.style.display = 'block';
+            eyeSlashIcon.style.display = 'none';
+        }
+    }
+
+    function checkPasswordStrength() {
+        const password = document.getElementById('password_input').value;
+        const segments = document.querySelectorAll('.strength-segment');
+        const strengthText = document.getElementById('strengthText');
+        const requirements = {
+            length: password.length >= 8,
+            upper: /[A-Z]/.test(password),
+            lower: /[a-z]/.test(password),
+            num: /[0-9]/.test(password),
+            spec: /[^A-Za-z0-9]/.test(password)
+        };
+
+        Object.keys(requirements).forEach(req => {
+            const el = document.getElementById(`req-${req}`);
+            const icon = el.querySelector('.req-icon');
+            icon.style.visibility = requirements[req] ? 'visible' : 'hidden';
+            el.style.color = requirements[req] ? '#ea580c' : '#9ca3af';
+        });
+
+        const strength = Object.values(requirements).filter(Boolean).length;
+        if (password.length === 0) {
+            segments.forEach(seg => seg.style.background = '#e5e7eb');
+            strengthText.textContent = 'Weak';
+            strengthText.style.color = '#9ca3af';
+            return;
+        }
+
+        let color, text;
+        if (strength <= 2) { color = '#ef4444'; text = 'Weak'; }
+        else if (strength <= 4) { color = '#f97316'; text = 'Medium'; }
+        else { color = '#10b981'; text = 'Strong'; }
+
+        segments.forEach((seg, i) => seg.style.background = i < strength ? color : '#e5e7eb');
+        strengthText.textContent = text;
+        strengthText.style.color = color;
+    }
+
+    // ─── GPS Status Detection (integrated from GPS Status & Guide) ────────────
+    function getDeviceType() {
+        const ua = navigator.userAgent;
+        if (/android/i.test(ua)) return 'android';
+        if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
+        return 'desktop';
+    }
+
+
+
+    function updateGpsStatusPill(state) {
+        const pill = document.getElementById('gps-status-pill');
+        if (!pill) return;
+
+        if (state === 'active') {
+            pill.textContent = '✓ GPS ON';
+            pill.style.background = '#ecfdf5';
+            pill.style.color = '#059669';
+        } else if (state === 'denied') {
+            pill.textContent = '✗ BLOCKED';
+            pill.style.background = '#fff1f2';
+            pill.style.color = '#be123c';
+        } else if (state === 'unavailable') {
+            pill.textContent = '⚠ GPS OFF';
+            pill.style.background = '#fff7ed';
+            pill.style.color = '#c2410c';
+        } else {
+            pill.textContent = 'CHECKING...';
+            pill.style.background = '#f3f4f6';
+            pill.style.color = '#9ca3af';
+        }
+    }
+
+    function checkGpsStatus() {
+        if (!navigator.geolocation) {
+            updateGpsStatusPill('denied');
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            () => updateGpsStatusPill('active'),
+            (err) => {
+                if (err.code === err.PERMISSION_DENIED) updateGpsStatusPill('denied');
+                else updateGpsStatusPill('unavailable');
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    }
+
+    // Auto-poll every 5s to detect if GPS gets enabled while the user is on the page
+    setInterval(() => {
+        const pill = document.getElementById('gps-status-pill');
+        if (pill && (pill.textContent.includes('OFF') || pill.textContent.includes('BLOCKED'))) {
+            navigator.geolocation.getCurrentPosition(
+                () => updateGpsStatusPill('active'),
+                () => { },
+                { timeout: 2000 }
+            );
+        }
+    }, 5000);
+    // ─────────────────────────────────────────────────────────────────────────
+
+    window.addEventListener('load', () => {
+        // 1. Initialize Event Listeners (Bypasses CSP inline-handler restrictions)
+        
+        // Portal Role Tabs
+        const rolesForTabs = ['admin', 'employee', 'student', 'intern'];
+        rolesForTabs.forEach(role => {
+            const btnEl = document.getElementById(`tab-${role}`);
+            if (btnEl) btnEl.addEventListener('click', () => selectRole(role));
+        });
+
+        // Location Verification Controls
+        const verifyBtn = document.getElementById('verifyLocBtn');
+        if (verifyBtn) verifyBtn.addEventListener('click', () => startLocationVerification());
+        
+        const closeModBtn = document.getElementById('closeQRModalBtn');
+        if (closeModBtn) closeModBtn.addEventListener('click', closeQRModal);
+
+        // Password Toggle
+        const togglePassBtn = document.getElementById('togglePasswordBtn');
+        if (togglePassBtn) togglePassBtn.addEventListener('click', togglePasswordVisibility);
+
+        // Real-time Inputs
+        const emailField = document.getElementById('email_input');
+        if (emailField) emailField.addEventListener('input', checkEmailBypass);
+
+        const passField = document.getElementById('password_input');
+        if (passField) passField.addEventListener('input', checkPasswordStrength);
+
+        // 2. Set Initial UI State
+        const roleInputFieldEl = document.getElementById('selected_role');
+        if (roleInputFieldEl && roleInputFieldEl.value) {
+            selectRole(roleInputFieldEl.value);
+        } else {
+            selectRole('admin');
+        }
+        
+        // 3. Periodic checks
+        checkGpsStatus();
+        setInterval(checkGpsStatus, 5000);
+        checkEmailBypass();
+
+        // 4. Flash message auto-dismissal
+        setTimeout(() => {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(msg => {
+                msg.classList.add('fade-out');
+                setTimeout(() => { msg.style.display = 'none'; }, 600);
+            });
+        }, 3000);
+    });
+</script>
+{% endblock %}

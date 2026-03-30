@@ -1,0 +1,18 @@
+<html>
+<body style="font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 40px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <h2 style="color: #f97316;">New Leave Request</h2>
+        <p style="color: #475569; font-size: 16px;">Hello Admin,</p>
+        <p style="color: #475569; font-size: 16px;"><strong>{{ employee_name }}</strong> has submitted a new leave request.</p>
+        <div style="background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Type:</strong> {{ details.leave_type }}</p>
+            <p style="margin: 5px 0;"><strong>Period:</strong> {{ details.start_date }} to {{ details.end_date }}</p>
+            <p style="margin: 5px 0;"><strong>Reason:</strong> {{ details.reason }}</p>
+        </div>
+        <p style="color: #475569; font-size: 16px;">Please log in to the EMS admin panel to approve or reject this request.</p>
+        <div style="margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px; color: #94a3b8; font-size: 14px;">
+            Enterprise Employee Management System
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full text-center">
+        <h1 class="text-9xl font-extrabold text-[#ea580c]">400</h1>
+        <h2 class="mt-4 text-3xl font-bold text-gray-900">Bad Request</h2>
+        <p class="mt-2 text-base text-gray-500">The server could not understand the request due to invalid syntax.</p>
+        <div class="mt-6">
+            <a href="{{ url_for('auth.login') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#ea580c] hover:bg-[#c44d00]">
+                Go back to Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
