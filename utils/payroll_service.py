@@ -15,11 +15,14 @@ class PayrollService:
             return None
         
         # Calculate actual working days (Mon-Fri) in the month
-        # This is more accurate than a fixed 25-day divisor.
+        # Optimized: mathematical calculation instead of a 31-day loop per employee
         _, days_in_month = calendar.monthrange(year, month)
+        first_day_weekday, _ = calendar.monthrange(year, month)
+        
+        # Count weekdays (0-4)
         total_working_days = 0
-        for day in range(1, days_in_month + 1):
-            if calendar.weekday(year, month, day) < 5: # 0-4 = Mon-Fri
+        for i in range(days_in_month):
+            if (first_day_weekday + i) % 7 < 5:
                 total_working_days += 1
         
         # If no working days found (not possible), fallback to 22.

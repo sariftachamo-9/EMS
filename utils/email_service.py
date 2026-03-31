@@ -21,9 +21,9 @@ def send_email(subject, recipient, template, **kwargs):
     thr.start()
     return thr
 
-def send_otp_email(user, otp):
-    # Standard 2FA login (can stay on primary email/personal depending on preference)
-    recipient = user.profile.personal_email if (user.profile and user.profile.personal_email) else user.email
+def send_otp_email(user, otp, recipient=None):
+    if not recipient:
+        recipient = user.profile.personal_email if (user.profile and user.profile.personal_email) else user.email
     return send_email(
         subject="Your EMS Login OTP",
         recipient=recipient,

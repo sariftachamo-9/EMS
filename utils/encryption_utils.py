@@ -5,17 +5,20 @@ from flask import current_app
 class EncryptionService:
     @staticmethod
     def get_fernet():
+        import base64
         key = os.environ.get('ENCRYPTION_KEY')
-        if not key:
+        if key:
+            if isinstance(key, str):
+                key = key.encode()
+            return Fernet(key)
+        else:
             # Fallback for development if not set, BUT LOG A WARNING
             # In production, this will fail purposefully if key is missing
-            key = current_app.config.get('SECRET_KEY')
-            if len(key) < 32:
-                key = key.ljust(32)[:32].encode()
-            import base64
-            key = base64.urlsafe_b64encode(key)
-        
-        return Fernet(key)
+            secret = current_app.config.get('SECRET_KEY', '')
+            if len(secret) < 32:
+                secret = secret.ljust(32)[:32]
+            key = base64.urlsafe_b64encode(secret.encode()[:32])
+            return Fernet(key)
 
     @classmethod
     def encrypt(cls, data):

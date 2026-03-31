@@ -855,17 +855,6 @@
         );
     }
 
-    // Auto-poll every 5s to detect if GPS gets enabled while the user is on the page
-    setInterval(() => {
-        const pill = document.getElementById('gps-status-pill');
-        if (pill && (pill.textContent.includes('OFF') || pill.textContent.includes('BLOCKED'))) {
-            navigator.geolocation.getCurrentPosition(
-                () => updateGpsStatusPill('active'),
-                () => { },
-                { timeout: 2000 }
-            );
-        }
-    }, 5000);
     // ─────────────────────────────────────────────────────────────────────────
 
     window.addEventListener('load', () => {

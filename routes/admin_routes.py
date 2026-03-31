@@ -229,7 +229,7 @@ def leave_requests():
                            curr_status=status,
                            curr_leave_type=leave_type)
 
-@admin_bp.route('/approve-leave/<int:leave_id>/<string:status>')
+@admin_bp.route('/approve-leave/<int:leave_id>/<string:status>', methods=['POST'])
 @login_required
 @admin_required
 def approve_leave(leave_id, status):
@@ -256,8 +256,14 @@ def attendance():
     # Base query for existing attendance records
     query = Attendance.query.join(User).join(EmployeeProfile)
     
-    # Filter by date
-    query = query.filter(db.func.date(Attendance.check_in) == target_date)
+    # Filter by date using an index-friendly range (Start of Day to End of Day)
+    start_of_day = datetime.combine(target_date, datetime.min.time())
+    end_of_day = datetime.combine(target_date, datetime.max.time())
+    
+    query = query.filter(
+        Attendance.check_in >= start_of_day,
+        Attendance.check_in <= end_of_day
+    )
     
     if user_id:
         query = query.filter(Attendance.user_id == user_id)
@@ -406,13 +412,10 @@ def payroll():
     trend_data = []
     # Generate last 6 months list starting from current month backwards
     for i in range(5, -1, -1):
-        target = today.replace(day=1) - timedelta(days=28 * i)
-        target = target.replace(day=1) # Ensure we are at the first of that month
-        
-        # Proper month math to avoid timedelta edge cases
+        # Use proper month arithmetic to avoid timedelta edge cases
         m = current_month - i
         y = current_year
-        if m <= 0:
+        while m <= 0:
             m += 12
             y -= 1
             
@@ -856,7 +859,7 @@ def edit_staff(user_id):
         
     return render_template('admin/edit_staff.html', user=user, profile=profile)
 
-@admin_bp.route('/staff/delete/<int:user_id>')
+@admin_bp.route('/staff/delete/<int:user_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_staff(user_id):
@@ -933,42 +936,51 @@ def complete_role(user_id):
 @login_required
 @admin_required
 def get_stats():
-    # 1. Base Counts
-    total_employees = User.query.filter_by(role='employee').count()
-    total_interns = User.query.filter_by(role='intern').count()
-    total_students = User.query.filter_by(role='student').count()
+    # 1. Base Counts (Filtered for Active Users Only)
+    total_employees = User.query.filter_by(role='employee', is_active=True).count()
+    total_interns = User.query.filter_by(role='intern', is_active=True).count()
+    total_students = User.query.filter_by(role='student', is_active=True).count()
     
     today = get_nepal_time().date()
-    # Unique users checked in today
+    # Unique users checked in today (Including Weekends)
+    start_of_day = datetime.combine(today, datetime.min.time())
+    end_of_day = datetime.combine(today, datetime.max.time())
+    
     attendance_today = db.session.query(Attendance.user_id).filter(
-        db.func.date(Attendance.check_in) == today,
-        Attendance.is_weekend == False
+        Attendance.check_in >= start_of_day,
+        Attendance.check_in <= end_of_day
     ).distinct().count()
     
     pending_leaves = LeaveRequest.query.filter_by(status='pending').count()
     
-    # 2. Department Distribution (Doughnut)
+    # 2. Active Department Distribution (Doughnut)
     dept_query = db.session.query(
         EmployeeProfile.department, 
         db.func.count(EmployeeProfile.id)
-    ).group_by(EmployeeProfile.department).all()
+    ).join(User).filter(User.is_active == True).group_by(EmployeeProfile.department).all()
     
     dept_labels = [d[0] for d in dept_query]
     dept_values = [d[1] for d in dept_query]
     
-    # 3. Monthly Leave Trends (Bar - Last 6 Months)
+    # 3. Monthly Leave Trends (Improved Month Alignment)
     leave_trends = []
     trend_labels = []
     now = get_nepal_time()
+    
     for i in range(5, -1, -1):
-        target_date = now - timedelta(days=i*30)
-        month_name = target_date.strftime('%b')
-        year = target_date.year
-        month = target_date.month
+        # Calculate start and end of target month
+        # Subtract months correctly
+        target_year = now.year
+        target_month = now.month - i
+        while target_month <= 0:
+            target_month += 12
+            target_year -= 1
+            
+        month_name = datetime(target_year, target_month, 1).strftime('%b')
         
         count = LeaveRequest.query.filter(
-            db.extract('month', LeaveRequest.applied_on) == month,
-            db.extract('year', LeaveRequest.applied_on) == year,
+            db.extract('month', LeaveRequest.applied_on) == target_month,
+            db.extract('year', LeaveRequest.applied_on) == target_year,
             LeaveRequest.status == 'approved'
         ).count()
         
@@ -1014,13 +1026,15 @@ def staff_attendance_events(user_id):
     
     # 1. Fetch Attendance Records
     query = Attendance.query.filter_by(user_id=user_id)
+    start_date = None
+    end_date = None
     if start_str and end_str:
         try:
             start_date = datetime.fromisoformat(start_str.replace('Z', '+00:00')).date()
             end_date = datetime.fromisoformat(end_str.replace('Z', '+00:00')).date()
             query = query.filter(db.func.date(Attendance.check_in) >= start_date, 
                                  db.func.date(Attendance.check_in) <= end_date)
-        except:
+        except (ValueError, TypeError):
             pass
                              
     attendances = query.all()
@@ -1055,7 +1069,7 @@ def staff_attendance_events(user_id):
         
     # 2. Fetch Approved Leave Requests
     leave_query = LeaveRequest.query.filter_by(user_id=user_id, status='approved')
-    if start_str and end_str:
+    if start_str and end_str and start_date and end_date:
         try:
             leave_query = leave_query.filter(
                 db.or_(
@@ -1063,7 +1077,7 @@ def staff_attendance_events(user_id):
                     db.and_(LeaveRequest.end_date >= start_date, LeaveRequest.end_date <= end_date)
                 )
             )
-        except:
+        except (ValueError, TypeError):
             pass
         
     approved_leaves = leave_query.all()

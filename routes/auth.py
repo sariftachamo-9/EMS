@@ -45,13 +45,16 @@ def qr_login(token):
         return redirect(url_for('auth.login'))
 
     # STAFF: Direct Login (QR Login Bypass)
-
-    # SUCCESS (Phase 1): Admin check
-    if user.role == 'admin':
+    if user.role != 'admin':
+        # SUCCESS (Phase 1): Instant Login for Staff/Interns/Students
+        login_user(user)
+        session['session_version'] = current_app.config.get('SESSION_VERSION', '1')
+    else:
+        # ADMIN: Security check required
+        # For Admin QR, we still require a password check (Hybrid Security)
+        serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        token = serializer.dumps(user.id, salt=current_app.config['QR_LOGIN_SALT'])
         return redirect(url_for('auth.qr_password_check', token=token))
-
-    # SUCCESS (Phase 1): Instant Staff Login
-    login_user(user)
     
     # Automatic Check-In Logic for QR Login
     from database.models import Attendance, AuditLog
@@ -94,7 +97,7 @@ def qr_password_check(token):
     serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
         user_id = serializer.loads(token, salt=current_app.config['QR_LOGIN_SALT'], max_age=300)
-    except:
+    except (SignatureExpired, BadSignature):
         flash('Invalid or expired QR token.', 'danger')
         return redirect(url_for('auth.login'))
 
@@ -144,11 +147,16 @@ def login():
         email = (request.form.get('email') or '').strip().lower()
         password = (request.form.get('password') or '').strip()
         
+        # Security: Hybrid Email Domain Validation (Regex-based restoration)
         import re
-        # Validate email format
-        email_pattern = re.compile(r'^[a-zA-Z0-9.\-_]+@ems\.com$')
-        if not email or not email_pattern.match(email):
-            flash('Invalid email format. Must be admin@ems.com or name-department@ems.com', 'danger')
+        role_selected = request.form.get('role', 'admin')
+        domain_pattern = r'^[a-zA-Z0-9._%+-]+@ems\.com$'
+        if not re.match(domain_pattern, email):
+             flash('Security Alert: Access is restricted to official @ems.com domains.', 'danger')
+             return render_template('auth/login.html', selected_role=role_selected)
+        
+        if not email:
+            flash('Email is required.', 'danger')
             return render_template('auth/login.html', selected_role=request.form.get('role', 'admin'))
             
         user = User.query.filter_by(email=email).first()
@@ -175,19 +183,22 @@ def login():
                     flash('Account Inactive: Please contact the administrator.', 'danger')
                     return render_template('auth/login.html', selected_role=selected_role)
 
+                # SUCCESS (Phase 1): Trigger OTP Flow
                 otp = generate_otp()
                 user.otp = otp
                 user.otp_expiry = get_nepal_time() + timedelta(minutes=10)
+                db.session.add(AuditLog(user_id=user.id, action="Login Phase 1 Success (OTP Sent)", ip_address=ip))
                 db.session.commit()
                 
+                # Send OTP via email and display in console for dev
                 send_otp_email(user, otp)
                 print("\n" + "="*50)
-                print(f"║ IDENTIFIER: {email}")
-                print(f"║ OTP CODE:   \033[1;92m{otp}\033[0m")
+                print(f"║ LOGIN FOR: {user.email}")
+                print(f"║ OTP CODE:  \033[1;92m{otp}\033[0m")
                 print("="*50 + "\n")
                 
                 session['pending_user_id'] = user.id
-                flash('Two-Factor Authentication: Enter the OTP sent to your email.', 'info')
+                flash('Two-Factor Authentication: A security code has been sent to your email.', 'info')
                 return redirect(url_for('auth.verify_otp'))
             else:
                 current_app.logger.warning(f"Login failed: Password mismatch for {email}")
@@ -271,6 +282,7 @@ def verify_otp():
             session['session_token'] = token
             
             login_user(user)
+            session['session_version'] = current_app.config.get('SESSION_VERSION', '1')
             session.permanent = True # Enable 24-hour location re-verification policy
             session.pop('pending_user_id', None)
             
@@ -341,27 +353,31 @@ def forgot_password():
         user = User.query.filter_by(email=email).first()
         
         if user:
-            # OPTIONAL: Only allow resets if a personal email is set (Security Requirement)
-            if not user.profile or not user.profile.personal_email:
-                flash('Account Recovery Restricted: No personal email address is registered. Please contact your administrator.', 'danger')
-                return render_template('auth/forgot_password.html')
+            # Re-enforced Personal Email Requirement (Hybrid Security)
+            profile = EmployeeProfile.query.filter_by(user_id=user.id).first()
+            if not profile or not profile.personal_email:
+                db.session.add(AuditLog(user_id=user.id, action="Failed Password Reset (No Personal Email)", ip_address=request.remote_addr))
+                db.session.commit()
+                flash('Security Violation: Your account has no verified recovery email. Contact Admin.', 'danger')
+                return redirect(url_for('auth.login'))
 
             otp = generate_otp()
             user.otp = otp
             user.otp_expiry = get_nepal_time() + timedelta(minutes=15)
             db.session.commit()
             
-            # Send exclusively to personal email
-            send_password_reset_email(user, otp)
+            # Hybrid: Send to personal email for security
+            send_otp_email(user, otp, recipient=profile.personal_email)
             
             print("\n" + "="*50)
-            print(f"║ PASSWORD RESET (PERSONAL): {user.profile.personal_email}")
-            print(f"║ OTP CODE:       \033[1;96m{otp}\033[0m")
+            print(f"║ PASSWORD RESET FOR: {user.email}")
+            print(f"║ SENT TO PERSONAL:   {profile.personal_email}")
+            print(f"║ OTP CODE:           \033[1;96m{otp}\033[0m")
             print("="*50 + "\n")
             
         # Privacy Hardening: Always show the same success message to prevent email guessing
         session['reset_email'] = email
-        flash('If an account is associated with that email, a code has been sent to your registered personal email.', 'info')
+        flash('If an account is associated with that email, a code has been sent to your registered email.', 'info')
         return redirect(url_for('auth.verify_reset_otp'))
         
     return render_template('auth/forgot_password.html')

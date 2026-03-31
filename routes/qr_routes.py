@@ -19,7 +19,7 @@ def grant_bypass(user_id):
         return jsonify({'success': False, 'message': 'Unauthorized'}), 403
     
     user = User.query.get_or_404(user_id)
-    user.location_bypass_until = datetime.now() + timedelta(hours=24)
+    user.location_bypass_until = get_nepal_time() + timedelta(hours=24)
     
     # Audit Log
     db.session.add(AuditLog(
@@ -59,7 +59,7 @@ def check_bypass_status():
         return jsonify({'has_bypass': True, 'reason': 'admin'})
         
     # Check for temporary bypass
-    if user.location_bypass_until and user.location_bypass_until > datetime.now():
+    if user.location_bypass_until and user.location_bypass_until > get_nepal_time():
         return jsonify({'has_bypass': True, 'reason': 'temporary'})
         
     return jsonify({'has_bypass': False})

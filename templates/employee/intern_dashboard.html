@@ -9,12 +9,32 @@
     .fc-col-header-cell-cushion { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; }
     .fc-daygrid-day-number { font-size: 13px; font-weight: 700; color: #cbd5e1; padding: 15px !important; }
     .fc-day-today { background: #fff !important; }
-    .fc-day-today .fc-daygrid-day-number { color: #f97316 !important; position: relative; }
-    .fc-day-today .fc-daygrid-day-number::after { content: ''; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: #f97316; border-radius: 50%; }
+    .fc-day-today .fc-daygrid-day-number { color: #8b5cf6 !important; position: relative; }
+    .fc-day-today .fc-daygrid-day-number::after { content: ''; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 4px; height: 4px; background: #8b5cf6; border-radius: 50%; }
     .fc-toolbar-title { font-size: 1.5rem !important; font-weight: 900 !important; color: #1e293b !important; }
     .fc-button { background: #334155 !important; border: none !important; border-radius: 12px !important; font-weight: 700 !important; padding: 8px 16px !important; text-transform: capitalize !important; }
     .fc-button-active { background: #0f172a !important; }
     .fc-today-button { background: #94a3b8 !important; opacity: 1 !important; }
+
+    /* Attendance control highlight */
+    .attendance-dock {
+        background: linear-gradient(135deg, #f8faff 0%, #fff 100%);
+        border: 2px solid #e0e7ff;
+        border-radius: 1.5rem;
+        padding: 0.625rem;
+        box-shadow: 0 4px 24px rgba(139,92,246,0.06);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    /* Break pulse animation */
+    @keyframes break-pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+        50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); }
+    }
+    .break-active-pulse { animation: break-pulse 1.5s ease-in-out infinite; }
+
     @keyframes notice-slip-fade {
         0% { transform: translateY(-20px); opacity: 0; }
         10% { transform: translateY(0); opacity: 1; }
@@ -26,12 +46,12 @@
 
 {% if show_notice_popup and latest_notice %}
 <div class="fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-full max-w-lg px-6">
-    <div class="notice-popup bg-white border-2 border-orange-100 shadow-2xl rounded-3xl p-6 flex items-start space-x-6">
-        <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0 text-orange-600">
+    <div class="notice-popup bg-white border-2 border-violet-100 shadow-2xl rounded-3xl p-6 flex items-start space-x-6">
+        <div class="w-14 h-14 bg-violet-100 rounded-2xl flex items-center justify-center flex-shrink-0 text-violet-600">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
         </div>
         <div>
-            <p class="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">New Notice</p>
+            <p class="text-[10px] font-black text-violet-600 uppercase tracking-widest mb-1">New Notice</p>
             <h4 class="text-lg font-black text-slate-800 leading-tight mb-1">{{ latest_notice.title }}</h4>
             <p class="text-sm text-slate-600 line-clamp-2">{{ latest_notice.content }}</p>
         </div>
@@ -39,7 +59,7 @@
 </div>
 {% endif %}
 
-<div class="max-w-[1600px] mx-auto py-10 space-y-10" x-data="studentDashboard()">
+<div class="max-w-[1600px] mx-auto py-10 space-y-10" x-data="internDashboard()">
 
     <!-- GPS Location Banner -->
     <div x-show="showGpsBanner" x-cloak x-transition
@@ -69,18 +89,18 @@
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-            <p class="text-[10px] font-black text-orange-500 uppercase tracking-[0.2em] mb-1">Workshop Participant</p>
+            <p class="text-[10px] font-black text-violet-500 uppercase tracking-[0.2em] mb-1">Intern</p>
             <h1 class="text-3xl font-black text-slate-900 tracking-tight">My Dashboard</h1>
         </div>
 
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- ATTENDANCE DOCK: Check In / Take a Break / Check Out  -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <div class="flex items-center gap-2 bg-white p-2 rounded-2xl border border-orange-100 shadow-md">
+        <div class="flex items-center gap-2 bg-white p-2 rounded-2xl border border-violet-100 shadow-md">
 
             <!-- TAKE A BREAK — visible only when checked in & not on break -->
             <template x-if="checkedIn && !onBreak">
-                <button @click="startBreak()" :disabled="loading"
+                <button @click="startBreak()" :disabled="loading" id="btn-take-break"
                         class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center space-x-2 shadow-lg shadow-amber-100">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     <span>Take a Break</span>
@@ -89,8 +109,8 @@
 
             <!-- RESUME WORK — visible only when on break -->
             <template x-if="checkedIn && onBreak">
-                <button @click="endBreak()" :disabled="loading"
-                        class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center space-x-2 shadow-lg shadow-emerald-100">
+                <button @click="endBreak()" :disabled="loading" id="btn-resume"
+                        class="break-active-pulse bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-5 py-3 rounded-xl font-bold transition-all flex items-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                     <span>Resume Work</span>
                 </button>
@@ -98,14 +118,15 @@
 
             <!-- SHIFT TIMER -->
             <div class="text-xl font-mono font-black px-5 py-2 rounded-xl select-none"
-                 :class="onBreak ? 'bg-amber-50 text-amber-500 animate-pulse' : checkedIn ? 'bg-orange-50 text-orange-600' : 'bg-slate-50 text-slate-400'"
+                 :class="onBreak ? 'bg-amber-50 text-amber-500 animate-pulse' : checkedIn ? 'bg-violet-50 text-violet-600' : 'bg-slate-50 text-slate-400'"
                  x-text="shiftTimer">00:00:00</div>
 
             <!-- CHECK IN — visible when not checked in -->
             <template x-if="!checkedIn && !shiftCompleted">
                 <button @click="checkIn()" :disabled="loading || (gpsStatus !== 'inside' && !hasBypass)"
+                        id="btn-check-in"
                         class="text-white px-8 py-3 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                        :class="gpsStatus === 'inside' || hasBypass ? 'bg-orange-600 hover:bg-orange-700 shadow-lg shadow-orange-100' : 'bg-slate-300 cursor-not-allowed'">
+                        :class="gpsStatus === 'inside' || hasBypass ? 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-100' : 'bg-slate-300 cursor-not-allowed'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
                     <span x-text="loading ? 'Verifying...' : 'Check In'"></span>
                 </button>
@@ -114,137 +135,135 @@
             <!-- CHECK OUT — visible when checked in -->
             <template x-if="checkedIn">
                 <button @click="checkOut()" :disabled="onBreak"
+                        id="btn-check-out"
                         class="bg-rose-600 hover:bg-rose-700 active:scale-95 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-rose-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
                     <span>Check Out</span>
                 </button>
             </template>
 
-            <!-- SESSION DONE badge -->
+            <!-- SHIFT COMPLETE badge -->
             <template x-if="shiftCompleted">
-                <button disabled class="bg-orange-50 text-orange-600 px-8 py-3 rounded-xl font-bold cursor-not-allowed border border-orange-200 flex items-center space-x-2">
+                <button disabled
+                        class="bg-violet-50 text-violet-600 px-8 py-3 rounded-xl font-bold cursor-not-allowed border border-violet-200 flex items-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span>Session Done</span>
+                    <span>Shift Complete</span>
                 </button>
             </template>
         </div>
         <!-- ══════════════════════════════════════════════════════ -->
     </div>
 
-    <!-- Stats Row -->
+    <!-- Stats Grid -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <!-- Workshop Status -->
-        {% set ws = current_user.profile.workshop_status or 'Ongoing' %}
-        <div class="bg-gradient-to-br {% if ws == 'Completed' %}from-emerald-500 to-teal-600 shadow-emerald-100{% elif ws == 'Ongoing' %}from-orange-600 to-amber-700 shadow-orange-100{% else %}from-slate-500 to-slate-700 shadow-slate-100{% endif %} p-6 rounded-[2rem] shadow-lg border border-white/10 text-white flex items-center space-x-4 group hover:scale-[1.03] transition-all duration-300">
-            <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 backdrop-blur-md border border-white/20">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+        <!-- Leave Balance -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100/50 flex items-center space-x-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <div class="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center text-violet-500 shadow-sm flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
             </div>
             <div>
-                <p class="text-[9px] font-black text-white/70 uppercase tracking-[0.15em] mb-1 leading-none">Workshop Status</p>
-                <p class="text-xl font-black">{{ ws }}</p>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Leave Balance</p>
+                <div class="flex items-baseline space-x-1">
+                    <span class="text-xl font-black text-slate-800">{{ leave_balance|int if leave_balance == leave_balance|int else leave_balance }}</span>
+                    <span class="text-lg font-bold text-slate-800">Days</span>
+                </div>
             </div>
         </div>
 
-        <!-- Attendance Score -->
+        <!-- Attendance -->
         <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100/50 flex items-center space-x-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 shadow-sm flex-shrink-0">
+            <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shadow-sm flex-shrink-0">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
             <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Attendance</p>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Attendance (%)</p>
                 <p class="text-xl font-black text-slate-800">{{ attendance_score }}%</p>
             </div>
         </div>
 
+        <!-- Stipend -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100/50 flex items-center space-x-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+            <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm flex-shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Stipend</p>
+                <p class="text-xl font-black text-slate-800">Rs.{{ "{:,.0f}".format(current_user.profile.base_salary or 0) }}</p>
+            </div>
+        </div>
+
         <!-- QR Badge -->
-        <div class="bg-gradient-to-br from-orange-400 to-amber-600 p-6 rounded-[2rem] shadow-lg shadow-orange-100 border border-orange-400/30 flex items-center space-x-4 group hover:scale-[1.05] hover:-translate-y-1 transition-all duration-300 cursor-pointer" @click="showQR = true">
+        <div class="bg-gradient-to-br from-violet-500 to-indigo-600 p-6 rounded-[2rem] shadow-lg shadow-violet-100 border border-violet-400/30 flex items-center space-x-4 group hover:scale-[1.05] hover:-translate-y-1 transition-all duration-300 cursor-pointer" @click="showQR = true">
             <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white shadow-sm backdrop-blur-md flex-shrink-0 border border-white/20">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v-4m6 0h-2m-6 0H6m6 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </div>
             <div>
-                <p class="text-[9px] font-black text-orange-100 uppercase tracking-[0.15em] mb-1 leading-none">Workshop Badge</p>
+                <p class="text-[9px] font-black text-violet-100 uppercase tracking-[0.15em] mb-1 leading-none">Intern Badge</p>
                 <p class="text-lg font-black text-white leading-tight">Quick Scan</p>
             </div>
         </div>
 
-        <!-- Payment Status -->
-        {% set pay_status = current_user.profile.payment_status or 'Unpaid' %}
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100/50 flex items-center space-x-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div class="w-12 h-12 {% if pay_status == 'Paid' %}bg-emerald-50{% else %}bg-amber-50{% endif %} rounded-2xl flex items-center justify-center {% if pay_status == 'Paid' %}text-emerald-500{% else %}text-amber-500{% endif %} shadow-sm flex-shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </div>
-            <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Payment</p>
-                <p class="text-xl font-black {% if pay_status == 'Paid' %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ pay_status }}</p>
-            </div>
-        </div>
-
-        <!-- Workshop End Date -->
-        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100/50 flex items-center space-x-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-            <div class="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 shadow-sm flex-shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            </div>
-            <div>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Workshop Ends</p>
-                <p class="text-lg font-black text-slate-800">
-                    {% if current_user.profile.workshop_end_date %}
-                        {{ current_user.profile.workshop_end_date.strftime('%d %b %Y') }}
-                    {% else %}
-                        <span class="text-slate-400 text-sm font-semibold">Not Set</span>
-                    {% endif %}
-                </p>
+        <!-- Break Status Card -->
+        <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100/50 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+             :class="onBreak ? 'border-amber-200 bg-amber-50/30' : ''">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0 transition-colors"
+                     :class="onBreak ? 'bg-amber-100 text-amber-600' : 'bg-slate-50 text-slate-400'">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div>
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 leading-none">Break Status</p>
+                    <p class="text-sm font-black" :class="onBreak ? 'text-amber-600' : 'text-slate-400'" x-text="onBreak ? 'On Break' : (checkedIn ? 'Working' : 'Not Checked In')">—</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Workshop Timeline -->
+    <!-- Internship Progress -->
+    {% set start = current_user.profile.joining_date %}
+    {% if start %}
     <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
         <div class="px-10 pt-8 pb-6 border-b border-gray-50 flex items-center space-x-4">
-            <div class="w-10 h-10 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
+            <div class="w-10 h-10 bg-violet-50 rounded-2xl flex items-center justify-center text-violet-500">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
             </div>
-            <h2 class="text-xl font-black text-slate-800 tracking-tight">Workshop Progress</h2>
+            <h2 class="text-xl font-black text-slate-800 tracking-tight">Internship Progress</h2>
         </div>
         <div class="px-10 py-8">
-            {% set start = current_user.profile.joining_date %}
             {% set end = current_user.profile.workshop_end_date %}
-            {% if start and end %}
+            {% if end %}
                 {% set today = today_date %}
                 {% set total_period = (end - start).days %}
                 {% set days_elapsed = [(today - start).days, 0]|max %}
                 {% set days_elapsed = [days_elapsed, total_period]|min %}
                 {% set progress_pct = ((days_elapsed / total_period) * 100)|round(1) if total_period > 0 else 0 %}
-                
                 <div class="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
                     <span>{{ start.strftime('%d %b %Y') }}</span>
-                    <span class="text-orange-600">{{ progress_pct }}% Complete</span>
+                    <span class="text-violet-600">{{ progress_pct }}% Complete</span>
                     <span>{{ end.strftime('%d %b %Y') }}</span>
                 </div>
-                
                 <div class="h-4 bg-slate-100/50 rounded-full p-1 border border-slate-100 shadow-inner">
-                    <div class="h-full bg-gradient-to-r from-orange-500 via-orange-600 to-emerald-500 rounded-full shadow-lg shadow-orange-100/50 transition-all duration-1000 ease-out" style="width: {{ progress_pct }}%"></div>
+                    <div class="h-full bg-gradient-to-r from-violet-500 via-indigo-500 to-emerald-500 rounded-full shadow-lg shadow-violet-100/50 transition-all duration-1000 ease-out" style="width: {{ progress_pct }}%"></div>
                 </div>
-                
                 <div class="flex items-center justify-between mt-4">
                     <p class="text-xs text-slate-500 font-bold">
                         {% if days_elapsed >= total_period %}
-                            <span class="text-emerald-600">✓ Mission Accomplished ({{ total_period }} Days)</span>
+                            <span class="text-emerald-600">✓ Internship Complete ({{ total_period }} Days)</span>
                         {% else %}
-                            <span class="text-slate-900">{{ total_period - days_elapsed }}</span> 
-                            <span class="text-slate-400">days remaining of</span> 
-                            <span class="text-slate-900">{{ total_period }}</span> 
-                            <span class="text-slate-400">total workshop days</span>
+                            <span class="text-slate-900">{{ total_period - days_elapsed }}</span>
+                            <span class="text-slate-400"> days remaining of </span>
+                            <span class="text-slate-900">{{ total_period }}</span>
+                            <span class="text-slate-400"> total internship days</span>
                         {% endif %}
                     </p>
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        Est. Completion: {{ end.strftime('%b %d') }}
-                    </div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Est. End: {{ end.strftime('%b %d') }}</div>
                 </div>
             {% else %}
-                <p class="text-sm text-slate-400 font-semibold">Workshop dates not configured yet. Contact admin.</p>
+                <p class="text-sm text-slate-400 font-semibold">Internship end date not set. Contact admin.</p>
             {% endif %}
         </div>
     </div>
+    {% endif %}
 
     <!-- Attendance Calendar -->
     <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
@@ -260,23 +279,23 @@
     <div class="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-8 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
             <div class="flex items-center space-x-4">
-                <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 shadow-sm">
+                <div class="w-12 h-12 bg-violet-50 rounded-2xl flex items-center justify-center text-violet-500 shadow-sm">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l4 4v10a2 2 0 01-2 2zM3 8h4m10 8h4m-4 0h-4m-4 0H5"></path></svg>
                 </div>
-                <h2 class="text-xl font-black text-slate-800 tracking-tight">Notices & Announcements</h2>
+                <h2 class="text-xl font-black text-slate-800 tracking-tight">Notices &amp; Announcements</h2>
             </div>
-            <span class="text-[10px] font-black bg-orange-100 text-orange-600 px-3 py-1 rounded-full uppercase">Workshop Feed</span>
+            <span class="text-[10px] font-black bg-violet-100 text-violet-600 px-3 py-1 rounded-full uppercase">Intern Feed</span>
         </div>
         <div class="p-8">
             {% if notices %}
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {% for notice in notices %}
-                    <div class="group cursor-default bg-slate-50/50 p-6 rounded-3xl border border-transparent hover:border-orange-200 hover:bg-white transition-all duration-300">
+                    <div class="group cursor-default bg-slate-50/50 p-6 rounded-3xl border border-transparent hover:border-violet-200 hover:bg-white transition-all duration-300">
                         <div class="flex justify-between items-start mb-4">
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ notice.created_at.strftime('%d %b, %Y') }}</p>
-                            <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+                            <span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse"></span>
                         </div>
-                        <h4 class="text-md font-black text-slate-800 group-hover:text-orange-600 transition-colors mb-2">{{ notice.title }}</h4>
+                        <h4 class="text-md font-black text-slate-800 group-hover:text-violet-600 transition-colors mb-2">{{ notice.title }}</h4>
                         <p class="text-sm text-slate-500 line-clamp-3 leading-relaxed">{{ notice.content }}</p>
                     </div>
                     {% endfor %}
@@ -295,14 +314,14 @@
     <!-- QR Badge Modal -->
     <div x-show="showQR" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
         <div @click.away="showQR = false" class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center">
-            <h3 class="text-xl font-bold text-slate-800 mb-6">Workshop Badge</h3>
+            <h3 class="text-xl font-bold text-slate-800 mb-6">Intern Badge</h3>
             <div class="w-48 h-48 bg-white mx-auto rounded-2xl mb-6 p-4 border-2 border-slate-50 shadow-inner">
                 <img src="{{ url_for('static', filename='images/badges/' + qr_path) }}" alt="QR Badge" class="w-full h-full object-contain">
             </div>
-            <p class="text-slate-500 text-sm mb-8">Present this badge at the office terminal to mark your attendance.</p>
+            <p class="text-slate-500 text-sm mb-8">Scan this badge at the office terminal to mark your attendance.</p>
             <div class="flex flex-col space-y-3">
-                <a href="{{ url_for('static', filename='images/badges/' + qr_path) }}" download="Workshop_Badge_{{ current_user.username or current_user.id }}.png" 
-                   class="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl hover:bg-emerald-700 transition flex items-center justify-center space-x-2">
+                <a href="{{ url_for('static', filename='images/badges/' + qr_path) }}" download="Intern_Badge_{{ current_user.username or current_user.id }}.png"
+                   class="w-full bg-violet-600 text-white font-bold py-4 rounded-2xl hover:bg-violet-700 transition flex items-center justify-center space-x-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     <span>Download Badge</span>
                 </a>
@@ -316,7 +335,7 @@
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js'></script>
 
 <script>
-function studentDashboard() {
+function internDashboard() {
     return {
         checkedIn: false,
         onBreak: false,
@@ -339,7 +358,9 @@ function studentDashboard() {
         init() {
             this.initCalendar();
             this.checkBypass();
+
             {% if attendance and not attendance.check_out %}
+            // ── Currently checked in ──────────────────────────────
             const checkInRaw = '{{ attendance.check_in.isoformat() }}{{ tz_offset }}';
             this.checkInTime = new Date(checkInRaw);
             this.checkedIn = true;
@@ -349,15 +370,19 @@ function studentDashboard() {
             {% endif %}
             this.startHeartbeat();
             this.gpsStatus = 'inside';
-            this.gpsMessage = 'Checked in - Location verified';
+            this.gpsMessage = 'Checked in — Location verified';
             {% elif attendance and attendance.check_out %}
+            // ── Shift already completed today ─────────────────────
             this.shiftCompleted = true;
             const checkInRaw = '{{ attendance.check_in.isoformat() }}{{ tz_offset }}';
             const checkOutRaw = '{{ attendance.check_out.isoformat() }}{{ tz_offset }}';
             const diff = Math.floor((new Date(checkOutRaw) - new Date(checkInRaw)) / 1000);
             const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
             this.shiftTimer = [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
+            this.gpsStatus = 'inside';
+            this.gpsMessage = 'Shift completed for today';
             {% else %}
+            // ── Not yet checked in — run GPS check ────────────────
             this.refreshGps();
             {% endif %}
         },
@@ -373,7 +398,7 @@ function studentDashboard() {
                 this.hasBypass = data.has_bypass;
                 if (this.hasBypass) {
                     this.gpsStatus = 'inside';
-                    this.gpsMessage = data.reason === 'admin' ? 'Admin - Location exempt' : 'Location bypass active';
+                    this.gpsMessage = data.reason === 'admin' ? 'Admin — Location exempt' : 'Location bypass active';
                 }
             } catch(e) { /* silent */ }
         },
@@ -382,13 +407,11 @@ function studentDashboard() {
             if (this.checkedIn || this.shiftCompleted || this.hasBypass) return;
             this.gpsStatus = 'checking';
             this.gpsMessage = 'Detecting your location...';
-
             if (!navigator.geolocation) {
                 this.gpsStatus = 'denied';
                 this.gpsMessage = 'Geolocation not supported by your browser';
                 return;
             }
-
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
                     this.gpsLat = position.coords.latitude;
@@ -426,66 +449,54 @@ function studentDashboard() {
             );
         },
 
-        initCalendar() {
-            var calendarEl = document.getElementById('calendar');
-            new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
-                events: '{{ url_for("staff.attendance_events") }}',
-                eventColor: '#f97316'
-            }).render();
-        },
-
-        startTimer() {
-            this.updateTimer();
-            this.timerInterval = setInterval(() => this.updateTimer(), 1000);
-        },
-
-        updateTimer() {
-            if (!this.checkInTime) return;
-            const diff = Math.floor((new Date() - this.checkInTime) / 1000);
-            const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
-            this.shiftTimer = [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
-        },
-
+        // ── Check In ────────────────────────────────────────────────
         async checkIn() {
             this.loading = true;
             let lat = this.gpsLat, lon = this.gpsLon;
-
             if (lat === null && !this.hasBypass) {
                 try {
-                    const position = await new Promise((resolve, reject) => {
-                        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-                    });
-                    lat = position.coords.latitude;
-                    lon = position.coords.longitude;
-                } catch(e) { /* let server handle */ }
+                    const pos = await new Promise((resolve, reject) =>
+                        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
+                    );
+                    lat = pos.coords.latitude;
+                    lon = pos.coords.longitude;
+                } catch(e) { /* let server decide */ }
             }
-
             fetch('{{ url_for("staff.check_in") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
                 body: JSON.stringify({ latitude: lat, longitude: lon })
             }).then(r => r.json()).then(data => {
                 this.loading = false;
-                if (data.success) { window.showToast('Checked in! Welcome.', 'success'); setTimeout(() => location.reload(), 1000); }
-                else { window.showToast(data.message, 'error'); if (data.require_gps) this.refreshGps(); }
+                if (data.success) {
+                    window.showToast('✅ Checked in! Welcome.', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    window.showToast(data.message, 'error');
+                    if (data.require_gps) this.refreshGps();
+                }
             }).catch(() => { this.loading = false; window.showToast('Check-in failed. Please retry.', 'error'); });
         },
 
+        // ── Check Out ───────────────────────────────────────────────
         checkOut() {
-            if (confirm('Are you sure you want to check out?')) {
+            if (confirm('Are you sure you want to check out and end your shift?')) {
                 fetch('{{ url_for("staff.check_out") }}', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
                     body: JSON.stringify({})
                 }).then(r => r.json()).then(data => {
-                    if (data.success) { window.showToast('Checked out successfully!', 'success'); setTimeout(() => location.reload(), 1500); }
-                    else { window.showToast(data.message, 'error'); }
-                }).catch(() => window.showToast('Error during check-out.', 'error'));
+                    if (data.success) {
+                        window.showToast('👋 Checked out successfully! See you tomorrow.', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        window.showToast(data.message, 'error');
+                    }
+                }).catch(() => window.showToast('Error during check-out. Try again.', 'error'));
             }
         },
 
+        // ── Take a Break ────────────────────────────────────────────
         startBreak() {
             this.loading = true;
             fetch('{{ url_for("staff.start_break") }}', {
@@ -493,11 +504,16 @@ function studentDashboard() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' }
             }).then(r => r.json()).then(data => {
                 this.loading = false;
-                if (data.success) { this.onBreak = true; window.showToast('Break started.', 'success'); }
-                else { window.showToast(data.message, 'error'); }
-            });
+                if (data.success) {
+                    this.onBreak = true;
+                    window.showToast('☕ Break started. Enjoy!', 'success');
+                } else {
+                    window.showToast(data.message, 'error');
+                }
+            }).catch(() => { this.loading = false; });
         },
 
+        // ── Resume Work ─────────────────────────────────────────────
         endBreak() {
             this.loading = true;
             fetch('{{ url_for("staff.end_break") }}', {
@@ -505,11 +521,28 @@ function studentDashboard() {
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' }
             }).then(r => r.json()).then(data => {
                 this.loading = false;
-                if (data.success) { this.onBreak = false; window.showToast('Break ended.', 'success'); }
-                else { window.showToast(data.message, 'error'); }
-            });
+                if (data.success) {
+                    this.onBreak = false;
+                    window.showToast('💼 Break ended. Back to work!', 'success');
+                } else {
+                    window.showToast(data.message, 'error');
+                }
+            }).catch(() => { this.loading = false; });
         },
 
+        // ── Timer ───────────────────────────────────────────────────
+        startTimer() {
+            this.updateTimer();
+            this.timerInterval = setInterval(() => this.updateTimer(), 1000);
+        },
+        updateTimer() {
+            if (!this.checkInTime) return;
+            const diff = Math.floor((new Date() - this.checkInTime) / 1000);
+            const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+            this.shiftTimer = [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
+        },
+
+        // ── Heartbeat ───────────────────────────────────────────────
         startHeartbeat() {
             setInterval(() => {
                 fetch('{{ url_for("staff.heartbeat") }}', {
@@ -518,6 +551,17 @@ function studentDashboard() {
                     body: JSON.stringify({})
                 });
             }, 180000);
+        },
+
+        // ── Calendar ────────────────────────────────────────────────
+        initCalendar() {
+            var calendarEl = document.getElementById('calendar');
+            new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek' },
+                events: '{{ url_for("staff.attendance_events") }}',
+                eventColor: '#8b5cf6'
+            }).render();
         }
     }
 }

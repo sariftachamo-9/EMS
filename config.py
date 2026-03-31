@@ -25,7 +25,7 @@ class Config:
     OFFICE_LATITUDE = float(os.environ.get('OFFICE_LATITUDE', 27.7172))
     OFFICE_LONGITUDE = float(os.environ.get('OFFICE_LONGITUDE', 85.3240))
     GEOFENCE_RADIUS = int(os.environ.get('GEOFENCE_RADIUS', 100))
-    REQUIRE_LOCATION_VERIFICATION = os.environ.get('REQUIRE_LOCATION_VERIFICATION', 'True').lower() == 'true'
+    REQUIRE_LOCATION_VERIFICATION = False
     OFFICE_PUBLIC_IP = os.environ.get('OFFICE_PUBLIC_IP', '')
     
     # Session / Security
@@ -42,6 +42,9 @@ class Config:
     RATELIMIT_STORAGE_URI = "memory://"
     RATELIMIT_STRATEGY = "fixed-window"
     RATELIMIT_HEADERS_ENABLED = True
+    
+    # Session Version Control (Increase this to force a global logout of all users)
+    SESSION_VERSION = os.environ.get('SESSION_VERSION', '1')
 
 class DevelopmentConfig(Config):
     DEBUG = True

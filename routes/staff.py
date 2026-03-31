@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app, session
 from flask_login import login_required, current_user
 from extensions import db
 from database.models import Attendance, LeaveRequest, EmployeeProfile, Notice, TimeLog
@@ -15,16 +15,12 @@ staff_bp = Blueprint('staff', __name__)
 def dashboard():
     today = get_nepal_time().date()
     
-    # Auto-sync past 30 days and next 7 days for Saturdays
-    AttendanceService.sync_saturdays_for_period(current_user.id, today - timedelta(days=30), today + timedelta(days=7))
+    today_str = today.strftime('%Y-%m-%d')
     
-    # Calculate Attendance Score
-    attendance_score = AttendanceService.calculate_attendance_score(current_user.id, today)
-    
-    # Calculate dynamic leave balance
-    from utils.leave_service import LeaveService
-    annual_allowance = current_user.profile.leave_allowance if current_user.profile else 15.0
-    leave_balance = LeaveService.calculate_leave_balance(current_user.id, annual_allowance)
+    # Auto-sync past 30 days and next 7 days for Saturdays (Lazy Sync - Once per day)
+    if session.get('last_saturday_sync') != today_str:
+        AttendanceService.sync_saturdays_for_period(current_user.id, today - timedelta(days=30), today + timedelta(days=7))
+        session['last_saturday_sync'] = today_str
     
     attendance = Attendance.query.filter_by(user_id=current_user.id).filter(db.func.date(Attendance.check_in) == today).first()
     leaves = LeaveRequest.query.filter_by(user_id=current_user.id).limit(5).all()
@@ -38,7 +34,6 @@ def dashboard():
     ).order_by(Notice.created_at.desc()).limit(5).all()
     
     # Smart Popup Logic
-    from flask import session
     latest_notice = notices[0] if notices else None
     show_notice_popup = False
     if latest_notice:
@@ -58,17 +53,7 @@ def dashboard():
     
     qr_path = QRService.generate_employee_badge(current_user.id)
     
-    if current_user.role == 'student':
-        return render_template('employee/student_dashboard.html',
-                               attendance=attendance,
-                               notices=notices,
-                               latest_notice=latest_notice,
-                               show_notice_popup=show_notice_popup,
-                               attendance_score=attendance_score,
-                               leave_balance=leave_balance,
-                               qr_path=qr_path,
-                               today_date=today)
-    
+    # Consolidate all staff roles (Employee, Intern, Student) to use the unified, role-aware dashboard.html
     return render_template('employee/dashboard.html', 
                            attendance=attendance, 
                            leaves=leaves, 
@@ -76,8 +61,35 @@ def dashboard():
                            notices=notices,
                            latest_notice=latest_notice,
                            show_notice_popup=show_notice_popup,
-                           attendance_score=attendance_score,
-                           leave_balance=leave_balance)
+                           today_date=today)
+
+@staff_bp.route('/api/attendance-stats', methods=['GET'])
+@login_required
+def get_attendance_stats():
+    """
+    Asynchronous endpoint to fetch dashboard statistics without blocking page load.
+    """
+    today = get_nepal_time().date()
+    
+    # Calculate Attendance Score
+    attendance_score = AttendanceService.calculate_attendance_score(current_user.id, today)
+    
+    # Calculate dynamic leave balance
+    from utils.leave_service import LeaveService
+    profile = current_user.profile
+    annual_allowance = profile.leave_allowance if profile else 15.0
+    workshop_status = profile.workshop_status if profile else 'Ongoing'
+    payment_status = profile.payment_status if profile else 'Pending'
+    
+    leave_balance = LeaveService.calculate_leave_balance(current_user.id, annual_allowance)
+    
+    return jsonify({
+        'attendance_score': attendance_score,
+        'leave_balance': leave_balance,
+        'workshop_status': workshop_status,
+        'payment_status': payment_status,
+        'has_profile': profile is not None
+    })
 
 @staff_bp.route('/check-in', methods=['POST'])
 @login_required
@@ -101,34 +113,11 @@ def check_in():
         db.session.commit()
         return jsonify({'success': False, 'message': 'You have already checked in for today.'}), 400
 
-    # GPS Location Verification
-    data = request.get_json() or {}
-    lat = data.get('latitude')
-    lon = data.get('longitude')
+    # GPS Location Verification (REMOVED: Location access feature disabled)
+    # data = request.get_json() or {}
+    # lat = data.get('latitude')
+    # lon = data.get('longitude')
     
-    # Admins are exempt from location checks
-    if current_user.role != 'admin':
-        # Check for location bypass
-        if current_user.location_bypass_until and current_user.location_bypass_until > datetime.now():
-            pass  # Bypass active, skip verification
-        else:
-            # Verify location
-            settings = OfficeSettings.query.first()
-            if settings:
-                if lat is None or lon is None:
-                    return jsonify({'success': False, 'message': 'GPS location is required for check-in. Please enable location services.', 'require_gps': True}), 403
-                
-                is_allowed, distance = AttendanceService.is_within_geofence(
-                    lat, lon, settings.latitude, settings.longitude, settings.radius
-                )
-                if not is_allowed:
-                    return jsonify({
-                        'success': False, 
-                        'message': f'You are outside the office geofence ({int(distance)}m away). Check-in is only allowed within {int(settings.radius)}m of the office.',
-                        'distance': int(distance),
-                        'radius': int(settings.radius)
-                    }), 403
-
     now = get_nepal_time()
     attendance = Attendance(user_id=current_user.id, check_in=now, heartbeat_last=now)
     db.session.add(attendance)
@@ -147,7 +136,7 @@ def check_in():
     # Audit log
     db.session.add(AuditLog(
         user_id=current_user.id, 
-        action=f"Checked in successfully via Dashboard (GPS: {lat}, {lon})", 
+        action=f"Checked in successfully via Dashboard", 
         ip_address=request.remote_addr
     ))
     
@@ -244,34 +233,6 @@ def end_break():
     attendance.break_end = now
     db.session.commit()
     return jsonify({'success': True, 'message': 'Break ended.'})
-
-# ─── Location Check API ───────────────────────────────────────────────────────
-@staff_bp.route('/check-location', methods=['POST'])
-@login_required
-def check_location():
-    """Verify if the user's GPS coordinates are within the office geofence"""
-    data = request.get_json() or {}
-    lat = data.get('latitude')
-    lon = data.get('longitude')
-    
-    if lat is None or lon is None:
-        return jsonify({'allowed': False, 'message': 'GPS coordinates not provided.'}), 400
-    
-    from database.models import OfficeSettings
-    settings = OfficeSettings.query.first()
-    if not settings:
-        return jsonify({'allowed': True, 'message': 'Office settings not configured.', 'distance': 0})
-    
-    is_allowed, distance = AttendanceService.is_within_geofence(
-        lat, lon, settings.latitude, settings.longitude, settings.radius
-    )
-    
-    return jsonify({
-        'allowed': is_allowed,
-        'distance': round(distance),
-        'radius': settings.radius,
-        'message': 'Within office geofence.' if is_allowed else f'Outside office radius ({round(distance)}m away).'
-    })
 
 # ─── My Profile ───────────────────────────────────────────────────────────────
 @staff_bp.route('/profile', methods=['GET', 'POST'])

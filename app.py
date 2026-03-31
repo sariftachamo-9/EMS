@@ -103,6 +103,36 @@ def create_app(config_name='default'):
     app.register_blueprint(contact_bp, url_prefix='/contact')
     app.register_blueprint(qr_bp, url_prefix='/qr')
 
+    # Global Session Reset Hook (Auto Logout on Server Refresh)
+    @app.before_request
+    def check_session_version():
+        from flask_login import current_user, logout_user
+        from flask import session, flash
+        
+        # We only check authenticated users
+        if current_user.is_authenticated:
+            server_version = app.config.get('SESSION_VERSION', '1')
+            user_session_version = session.get('session_version')
+            
+            # If version is missing or mismatched, force logout
+            if user_session_version != server_version:
+                app.logger.info(f"Session version mismatch (User: {user_session_version}, Server: {server_version}). Force Logout.")
+                logout_user()
+                session.clear()
+                flash('Your session has been reset by the server. Please login again.', 'info')
+                return redirect(url_for('auth.login'))
+
+    # Context processor for timezone offset
+    @app.context_processor
+    def inject_timezone_offset():
+        from datetime import datetime
+        import pytz
+        nepal_tz = pytz.timezone('Asia/Kathmandu')
+        offset = datetime.now(nepal_tz).strftime('%z')
+        # Format as "+05:45" for JavaScript ISO strings
+        tz_offset = offset[:3] + ':' + offset[3:]
+        return {'tz_offset': tz_offset}
+
     @app.route('/')
     @app.route('/login')
     def index():

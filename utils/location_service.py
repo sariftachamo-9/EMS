@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime, timedelta
 from extensions import db
 from database.models import VerificationToken
+from utils.time_utils import get_nepal_time
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     """Haversine formula to calculate distance in meters"""
@@ -19,7 +20,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 def generate_location_token():
     """Generates a secure verification token and stores it in the database."""
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.now() + timedelta(seconds=600)
+    expires_at = get_nepal_time() + timedelta(seconds=600)
     
     new_token = VerificationToken(
         token=token,
@@ -36,7 +37,7 @@ def verify_token_location(token, lat, lon):
     cleanup_tokens()
     
     v_token = VerificationToken.query.filter_by(token=token).first()
-    if not v_token or v_token.expires_at < datetime.now():
+    if not v_token or v_token.expires_at < get_nepal_time():
         return False, "Invalid or expired verification session."
     
     from utils.location_utils import verify_location_access
@@ -73,7 +74,7 @@ def check_token_status(token):
 
 def cleanup_tokens():
     """Removes expired verification tokens from the database."""
-    now = datetime.now()
+    now = get_nepal_time()
     VerificationToken.query.filter(VerificationToken.expires_at < now).delete()
     db.session.commit()
 
@@ -83,7 +84,7 @@ def verify_ip_fallback(token, user_ip, office_ip):
         return False
         
     v_token = VerificationToken.query.filter_by(token=token).first()
-    if not v_token or v_token.expires_at < datetime.now():
+    if not v_token or v_token.expires_at < get_nepal_time():
         return False
         
     if user_ip == office_ip and office_ip != "":

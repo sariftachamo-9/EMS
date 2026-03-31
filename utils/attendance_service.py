@@ -71,49 +71,40 @@ class AttendanceService:
     def sync_saturdays_for_period(user_id, start_date, end_date):
         """
         Auto-syncs Saturdays based on surrounding Friday and Sunday status (Sandwich Rule).
-        If both Friday and Sunday are absent, Saturday is 'absent'.
-        Otherwise, if either is present/late/half-day/holiday, Saturday is 'present'.
+        Optimized: Fetches all records in the period in ONE query instead of 111+ queries.
         """
+        # Fetch all attendance records for the period in bulk
+        records = Attendance.query.filter_by(user_id=user_id).filter(
+            Attendance.check_in >= datetime.combine(start_date, datetime.min.time()),
+            Attendance.check_in <= datetime.combine(end_date, datetime.max.time())
+        ).all()
+        
+        # Index records by date for O(1) lookup in memory
+        record_map = {att.check_in.date(): att for att in records}
+        
+        has_changes = False
         curr = start_date
         while curr <= end_date:
             if curr.weekday() == 5: # Saturday
-                # Check for existing records today
-                existing = Attendance.query.filter_by(user_id=user_id).filter(
-                    db.func.date(Attendance.check_in) == curr
-                ).first()
-                
+                existing = record_map.get(curr)
                 friday = curr - timedelta(days=1)
                 sunday = curr + timedelta(days=1)
                 
-                # Check Friday status
-                friday_att = Attendance.query.filter_by(user_id=user_id).filter(
-                    db.func.date(Attendance.check_in) == friday
-                ).first()
+                friday_att = record_map.get(friday)
+                sunday_att = record_map.get(sunday)
                 
-                # Check Sunday status
-                sunday_att = Attendance.query.filter_by(user_id=user_id).filter(
-                    db.func.date(Attendance.check_in) == sunday
-                ).first()
-                
-                # Logic: Treated as 'Present' if status is anything other than 'absent'
                 is_fri_present = friday_att and friday_att.status not in ['absent', None]
                 is_sun_present = sunday_att and sunday_att.status not in ['absent', None]
                 
-                # Sandwich Rule
                 calculated_status = 'present' if (is_fri_present or is_sun_present) else 'absent'
                 is_weekend = (calculated_status == 'present')
                 
                 if existing:
-                    # Reconciliation: Update status if it differs (unless it's 'present' meaning they actually worked)
-                    # We only downgrade to 'absent' or upgrade from 'absent' to 'present' based on the rule
-                    # But we don't override an actual 'checked-in' manually worked Saturday (which would have duration)
                     if existing.status != calculated_status:
-                        # Only update if the existing record is a "system generated" one (no check-out or dummy check-out)
-                        # For simplicity, if the status is one of the reconciled ones, we sync it.
                         existing.status = calculated_status
                         existing.is_weekend = is_weekend
+                        has_changes = True
                 else:
-                    # Create new system record
                     dummy_time = datetime.combine(curr, datetime.min.time()).replace(hour=12)
                     weekend_att = Attendance(
                         user_id=user_id, 
@@ -123,8 +114,11 @@ class AttendanceService:
                         is_weekend=is_weekend
                     )
                     db.session.add(weekend_att)
+                    has_changes = True
             curr += timedelta(days=1)
-        db.session.commit()
+        
+        if has_changes:
+            db.session.commit()
 
     @staticmethod
     def calculate_attendance_score(user_id, current_date):
@@ -143,10 +137,13 @@ class AttendanceService:
                 total_work_days += 1
             curr += timedelta(days=1)
             
-        # Count present days in DB
+        # Count present days in DB (Optimized query with raw datetime ranges for indexing)
+        start_of_month_dt = datetime.combine(first_of_month, datetime.min.time())
+        end_of_period_dt = datetime.combine(current_date, datetime.max.time())
+        
         present_count = Attendance.query.filter_by(user_id=user_id).filter(
-            db.func.date(Attendance.check_in) >= first_of_month,
-            db.func.date(Attendance.check_in) <= current_date,
+            Attendance.check_in >= start_of_month_dt,
+            Attendance.check_in <= end_of_period_dt,
             Attendance.status.in_(['present', 'half-day', 'late'])
         ).count()
 
@@ -168,21 +165,45 @@ class AttendanceMonitor:
         self.app = app
 
     def run(self):
-        import os, time
+        import os, time, subprocess
         lock_file = os.path.join(self.app.root_path, 'attendance_monitor.lock')
         
+        def is_pid_alive(pid):
+            try:
+                # Portable check for Windows using tasklist
+                output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}', '/NH'], 
+                                              stderr=subprocess.STDOUT, 
+                                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0).decode()
+                return str(pid) in output
+            except Exception:
+                return False
+
+        if os.path.exists(lock_file):
+            try:
+                with open(lock_file, 'r') as f:
+                    old_pid = int(f.read().strip())
+                if not is_pid_alive(old_pid):
+                    print(f"Stale monitor lock found (PID {old_pid} is dead). Cleaning up...")
+                    os.remove(lock_file)
+                else:
+                    print(f"Attendance Monitor already running under PID {old_pid}. Exiting.")
+                    return
+            except (ValueError, OSError):
+                # File corrupted or locked, try to remove it
+                try: 
+                    os.remove(lock_file)
+                except:
+                    return
+
         try:
-            # Atomic creation of a lock file. Fails if file exists.
+            # Atomic creation to prevent race condition
             self.lock_fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(self.lock_fd, str(os.getpid()).encode())
         except OSError:
-            # If the file exists, another process is already the monitor.
-            # (In production, we would also check if the PID in the file is still alive)
+            print("Could not acquire monitor lock. Another instance may have just started.")
             return
 
         print(f"Attendance Monitor started successfully (Lock acquired by PID {os.getpid()}).")
-        
-        # Write PID to lock file for debugging
-        os.write(self.lock_fd, str(os.getpid()).encode())
         while True:
             with self.app.app_context():
                 try:
@@ -201,22 +222,10 @@ class AttendanceMonitor:
             # 1. Inactivity Timeout (30 mins)
             if att.heartbeat_last and (now - att.heartbeat_last).total_seconds() > 1800: # 30 mins
                 att.check_out = att.heartbeat_last
+                att.status = AttendanceService.calculate_status(att.check_in, att.check_out)
                 has_changes = True
                 continue
                 
-            # 2. Geofence Grace Period Timeout (10 mins)
-            if att.outside_geofence_since:
-                elapsed_grace_mins = (now - att.outside_geofence_since).total_seconds() / 60
-                if elapsed_grace_mins > 10:
-                    from database.models import AuditLog
-                    db.session.add(AuditLog(
-                        user_id=att.user_id,
-                        action=f"System Auto-Checkout: Geofence grace period (10m) exceeded.",
-                        ip_address="0.0.0.0" # Background system action
-                    ))
-                    att.check_out = now
-                    has_changes = True
-
         if has_changes:
             try:
                 db.session.commit()

@@ -97,6 +97,10 @@ class Attendance(db.Model):
     break_end = db.Column(db.DateTime, nullable=True)
     is_weekend = db.Column(db.Boolean, default=False)
 
+    __table_args__ = (
+        db.Index('idx_attendance_user_checkin', 'user_id', 'check_in'),
+    )
+
 class TimeLog(db.Model):
     __tablename__ = 'time_logs'
     id = db.Column(db.Integer, primary_key=True)
@@ -117,6 +121,10 @@ class LeaveRequest(db.Model):
     reason = db.Column(db.Text)
     status = db.Column(db.String(20), default='pending') # pending, approved, rejected
     applied_on = db.Column(db.DateTime, default=get_nepal_time)
+
+    __table_args__ = (
+        db.Index('idx_leave_user_status', 'user_id', 'status'),
+    )
 
 class Payroll(db.Model):
     __tablename__ = 'payrolls'

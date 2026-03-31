@@ -95,8 +95,14 @@
                         <td class="px-8 py-5">
                             {% if req.status == 'pending' %}
                             <div class="flex items-center space-x-4">
-                                <a href="{{ url_for('admin.approve_leave', leave_id=req.id, status='approved') }}" class="text-emerald-500 hover:text-emerald-600 font-bold text-[11px] uppercase tracking-wider underline">Approve</a>
-                                <a href="{{ url_for('admin.approve_leave', leave_id=req.id, status='rejected') }}" class="text-rose-400 hover:text-rose-500 font-medium text-[11px] uppercase tracking-wider">Reject</a>
+                                <form action="{{ url_for('admin.approve_leave', leave_id=req.id, status='approved') }}" method="POST" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-emerald-500 hover:text-emerald-600 font-bold text-[11px] uppercase tracking-wider underline">Approve</button>
+                                </form>
+                                <form action="{{ url_for('admin.approve_leave', leave_id=req.id, status='rejected') }}" method="POST" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-rose-400 hover:text-rose-500 font-medium text-[11px] uppercase tracking-wider">Reject</button>
+                                </form>
                             </div>
                             {% else %}
                             <span class="text-[11px] text-slate-300 font-bold uppercase tracking-widest italic">Archived</span>
