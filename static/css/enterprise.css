@@ -29,14 +29,47 @@ body {
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
+.glass-premium {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
+}
+
 /* Animations */
 @keyframes pulse-soft {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.05); opacity: 0.8; }
 }
 
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
 .animate-pulse-soft {
     animation: pulse-soft 2s infinite ease-in-out;
+}
+
+.animate-float {
+    animation: float 6s infinite ease-in-out;
+}
+
+/* Premium Buttons */
+.premium-button-orange {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    box-shadow: 0 4px 15px -4px rgba(234, 88, 12, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-button-orange:hover {
+    box-shadow: 0 8px 25px -4px rgba(234, 88, 12, 0.5);
+    transform: translateY(-2px);
+}
+
+.premium-button-orange:active {
+    transform: scale(0.98);
 }
 
 /* Shimmer/Skeleton Loading */
@@ -66,6 +99,35 @@ body {
 .sidebar-scroll::-webkit-scrollbar-thumb {
     background: #e2e8f0;
     border-radius: 10px;
+}
+
+/* Global Input & Form Stabilization */
+input, select, textarea {
+    color: #111827 !important; /* Force dark text regardless of browser state */
+    background-color: #f9fafb;
+    transition: all 0.2s ease-in-out;
+}
+
+input:hover, select:hover, textarea:hover {
+    background-color: #f3f4f6;
+    color: #111827 !important;
+}
+
+input:focus, select:focus, textarea:focus {
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    outline: none;
+}
+
+/* Autofill Fixes (Chrome, Safari, Edge) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 50px #ffffff inset !important;
+    -webkit-text-fill-color: #111827 !important;
+    caret-color: #111827 !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Layout Specifics */

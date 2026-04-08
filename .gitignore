@@ -5,3 +5,11 @@ __pycache__/
 *.log
 .DS_Store
 .vscode/
+database/*.db
+database/*.lock
+*.lock
+logs/
+migrations/versions/*.pyc
+out.html
+diff.txt
+temp_login.html

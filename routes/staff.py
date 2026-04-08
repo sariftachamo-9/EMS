@@ -17,43 +17,47 @@ def dashboard():
     
     today_str = today.strftime('%Y-%m-%d')
     
-    # Auto-sync past 30 days and next 7 days for Saturdays (Lazy Sync - Once per day)
-    if session.get('last_saturday_sync') != today_str:
-        AttendanceService.sync_saturdays_for_period(current_user.id, today - timedelta(days=30), today + timedelta(days=7))
-        session['last_saturday_sync'] = today_str
-    
     attendance = Attendance.query.filter_by(user_id=current_user.id).filter(db.func.date(Attendance.check_in) == today).first()
     leaves = LeaveRequest.query.filter_by(user_id=current_user.id).limit(5).all()
     
-    # Fetch notices relevant to the user's role (Active, last 30 days, max 5)
+    # Fetch Notices
     cutoff_date = get_nepal_time() - timedelta(days=30)
     notices = Notice.query.filter(
         Notice.is_active == True,
         Notice.created_at >= cutoff_date,
-        db.or_(Notice.role_restriction == 'all', Notice.role_restriction == current_user.role)
+        db.or_(
+            Notice.role_restriction == 'all', 
+            Notice.role_restriction == current_user.role,
+            Notice.target_user_id == current_user.id
+        )
     ).order_by(Notice.created_at.desc()).limit(5).all()
     
     # Smart Popup Logic
     latest_notice = notices[0] if notices else None
     show_notice_popup = False
     if latest_notice:
-        # Check if posted in the last 24 hours
         now_dt = get_nepal_time()
-        # Convert created_at to offset-aware if needed, but here we assume it's naive UTC or already Nepal
-        # Let's use total_seconds diff
         time_diff = (now_dt - latest_notice.created_at).total_seconds()
         is_recent = time_diff < 86400  # 24 hours
-        
-        # Check session if already seen
         already_seen = session.get(f'notice_seen_{latest_notice.id}', False)
-        
         if is_recent and not already_seen:
             show_notice_popup = True
             session[f'notice_seen_{latest_notice.id}'] = True
     
     qr_path = QRService.generate_employee_badge(current_user.id)
+
+    # PRE-LOAD STATS FOR ULTRA-FAST INITIAL RENDERING
+    from utils.leave_service import LeaveService
+    profile = current_user.profile
+    annual_allowance = profile.leave_allowance if profile else 15.0
     
-    # Consolidate all staff roles (Employee, Intern, Student) to use the unified, role-aware dashboard.html
+    initial_stats = {
+        'attendance_score': AttendanceService.calculate_attendance_score(current_user.id, today),
+        'leave_balance': LeaveService.calculate_leave_balance(current_user.id, annual_allowance),
+        'workshop_status': profile.workshop_status if profile else 'Ongoing',
+        'payment_status': profile.payment_status if profile else 'Pending'
+    }
+    
     return render_template('employee/dashboard.html', 
                            attendance=attendance, 
                            leaves=leaves, 
@@ -61,7 +65,8 @@ def dashboard():
                            notices=notices,
                            latest_notice=latest_notice,
                            show_notice_popup=show_notice_popup,
-                           today_date=today)
+                           today_date=today,
+                           initial_stats=initial_stats)
 
 @staff_bp.route('/api/attendance-stats', methods=['GET'])
 @login_required
@@ -70,7 +75,16 @@ def get_attendance_stats():
     Asynchronous endpoint to fetch dashboard statistics without blocking page load.
     """
     today = get_nepal_time().date()
+    today_str = today.strftime('%Y-%m-%d')
     
+    # Auto-sync past 30 days and next 7 days for Saturdays (Moved to async stats API to prevent UI blocking)
+    if session.get('last_saturday_sync') != today_str:
+        try:
+            AttendanceService.sync_saturdays_for_period(current_user.id, today - timedelta(days=30), today + timedelta(days=7))
+            session['last_saturday_sync'] = today_str
+        except Exception as e:
+            current_app.logger.error(f"Saturday sync error: {e}")
+
     # Calculate Attendance Score
     attendance_score = AttendanceService.calculate_attendance_score(current_user.id, today)
     
@@ -203,7 +217,13 @@ def heartbeat():
 @staff_bp.route('/start-break', methods=['POST'])
 @login_required
 def start_break():
-    today = get_nepal_time().date()
+    now = get_nepal_time()
+    
+    # Restriction 1: Must be after 2:00 PM (14:00) Nepali Time
+    if now.hour < 14:
+        return jsonify({'success': False, 'message': 'Break can only be taken after 2:00 PM Nepali time.'}), 400
+
+    today = now.date()
     attendance = Attendance.query.filter_by(user_id=current_user.id).filter(
         db.func.date(Attendance.check_in) == today, 
         Attendance.check_out.is_(None)
@@ -212,7 +232,10 @@ def start_break():
     if not attendance:
         return jsonify({'success': False, 'message': 'No active session.'}), 404
         
-    now = get_nepal_time()
+    # Restriction 2: Once per day
+    if attendance.break_start:
+        return jsonify({'success': False, 'message': 'You have already taken your break for today.'}), 400
+        
     attendance.break_start = now
     db.session.commit()
     return jsonify({'success': True, 'message': 'Break started.'})

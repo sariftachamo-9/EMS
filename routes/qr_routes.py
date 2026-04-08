@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from extensions import db, csrf
-from database.models import User, EmployeeProfile, LoginLog, AuditLog
+from database.models import User, EmployeeProfile, LoginLog, AuditLog, Notice
 from utils.time_utils import get_nepal_time
 from datetime import datetime, timedelta
 import os
+import secrets
 from utils import location_service
 
 qr_bp = Blueprint('qr', __name__)
@@ -21,6 +22,16 @@ def grant_bypass(user_id):
     user = User.query.get_or_404(user_id)
     user.location_bypass_until = get_nepal_time() + timedelta(hours=24)
     
+    # Create a private Notice for the user
+    notice = Notice(
+        title="Location Bypass Activated",
+        content=f"Admin has granted you a 24-hour location bypass. You can now check in from any location until {user.location_bypass_until.strftime('%H:%M %d %b')}.",
+        target_user_id=user.id,
+        is_active=True,
+        notice_type="System Alert"
+    )
+    db.session.add(notice)
+
     # Audit Log
     db.session.add(AuditLog(
         user_id=current_user.id,
@@ -46,11 +57,18 @@ def check_bypass_status():
     if office_ip and request.remote_addr == office_ip:
         return jsonify({'has_bypass': True, 'reason': 'office_ip'})
         
-    # 2. User-Specific Bypasses (Require Email)
+    # 2. User-Specific Bypasses (Require Email or ID)
     if not email:
         return jsonify({'has_bypass': False})
     
     user = User.query.filter_by(email=email).first()
+    if not user:
+        # Fallback to ID-based lookup (Matching login identification rule)
+        from database.models import EmployeeProfile
+        user = User.query.join(EmployeeProfile).filter(
+            db.func.lower(EmployeeProfile.employee_id) == email.lower()
+        ).first()
+        
     if not user:
         return jsonify({'has_bypass': False})
     
@@ -156,7 +174,18 @@ def generate_qr_url(user):
     external_url = os.environ.get('EXTERNAL_URL')
     if external_url:
         return external_url.rstrip('/') + url_for('qr.auto_login', token=token)
-    return url_for('qr.auto_login', token=token, _external=True)
+    
+    # Secure fallback for dev/proxied environments
+    scheme = 'https' if not current_app.debug else request.scheme
+    url = url_for('qr.auto_login', token=token, _external=True, _scheme=scheme)
+    return url.replace('http://', 'https://') if not current_app.debug else url
+
+@qr_bp.route('/my-badge')
+@login_required
+def my_badge():
+    """Unified endpoint for any logged-in user to view their personal digital ID badge"""
+    verify_url = generate_qr_url(current_user)
+    return render_template('qr/personal_badge.html', user=current_user, verify_url=verify_url)
 
 @qr_bp.route('/generate/employee/<int:user_id>')
 @login_required
@@ -166,7 +195,7 @@ def em_qr_gen(user_id):
         return redirect(url_for('staff.dashboard'))
     user = User.query.get_or_404(user_id)
     verify_url = generate_qr_url(user)
-    return render_template('qr/em_qr_gen.html', user=user, verify_url=verify_url)
+    return render_template('qr/personal_badge.html', user=user, verify_url=verify_url)
 
 @qr_bp.route('/generate/intern/<int:user_id>')
 @login_required
@@ -176,7 +205,7 @@ def int_qr_gen(user_id):
         return redirect(url_for('staff.dashboard'))
     user = User.query.get_or_404(user_id)
     verify_url = generate_qr_url(user)
-    return render_template('qr/int_qr_gen.html', user=user, verify_url=verify_url)
+    return render_template('qr/personal_badge.html', user=user, verify_url=verify_url)
 
 @qr_bp.route('/generate/student/<int:user_id>')
 @login_required
@@ -186,7 +215,7 @@ def std_qr_gen(user_id):
         return redirect(url_for('staff.dashboard'))
     user = User.query.get_or_404(user_id)
     verify_url = generate_qr_url(user)
-    return render_template('qr/std_qr_gen.html', user=user, verify_url=verify_url)
+    return render_template('qr/personal_badge.html', user=user, verify_url=verify_url)
 
 # ─── Scanner Page ─────────────────────────────────────────────────────────────
 
@@ -247,6 +276,30 @@ def qr_login_api():
     if not user.is_active:
         return jsonify({'success': False, 'message': 'Account is inactive.'}), 403
 
+    # 1.5. Geofence Validation
+    from utils.location_utils import verify_location_access
+    from database.models import OfficeSettings
+    
+    settings = OfficeSettings.query.first()
+    office_ip = settings.office_ip if settings and settings.office_ip else current_app.config.get('OFFICE_PUBLIC_IP', '')
+    
+    # Check for Bypasses first (Office IP or Admin Grant)
+    has_bypass = False
+    
+    if office_ip and request.remote_addr == office_ip:
+        has_bypass = True
+    elif user.location_bypass_until and user.location_bypass_until > get_nepal_time():
+        has_bypass = True
+        
+    if not has_bypass:
+        if lat is None or lon is None:
+            return jsonify({'success': False, 'message': 'Location access required for auto-login.'}), 403
+            
+        is_allowed, msg, dist = verify_location_access(lat, lon)
+        if not is_allowed:
+            current_app.logger.warning(f"QR Login: Geofence rejection for {user_id_badge}. Distance: {int(dist)}m. IP: {request.remote_addr}")
+            return jsonify({'success': False, 'message': msg}), 403
+
     # 2. Store login record
     log = LoginLog(
         username=username,
@@ -258,8 +311,14 @@ def qr_login_api():
     )
     db.session.add(log)
     
-    # 3. Create user session
+    # 3. Create user session with consistent security tokens
+    # This prevents the Single Session Middleware from kicking the user out on the next click.
+    token = secrets.token_hex(16)
+    user.current_session_id = token
+    session['session_token'] = token
+    
     login_user(user)
+    session['session_version'] = current_app.config.get('BOOT_ID')
     
     # Audit Log for QR Login
     db.session.add(AuditLog(

@@ -336,8 +336,9 @@ def notices():
         title = request.form.get('title')
         content = request.form.get('content')
         role = request.form.get('role', 'all')
+        notice_type = request.form.get('notice_type', 'General Announcement Notices')
         
-        notice = Notice(title=title, content=content, role_restriction=role, is_active=True)
+        notice = Notice(title=title, content=content, role_restriction=role, notice_type=notice_type, is_active=True)
         db.session.add(notice)
         
         # Audit Log
@@ -364,14 +365,20 @@ def notices():
         
     notices_query = Notice.query
     search = request.args.get('search', '')
+    filter_date = request.args.get('date', '')
+    
     if search:
         notices_query = notices_query.filter(db.or_(
             Notice.title.ilike(f'%{search}%'),
             Notice.content.ilike(f'%{search}%')
         ))
         
+    if filter_date:
+        from sqlalchemy import cast, Date
+        notices_query = notices_query.filter(cast(Notice.created_at, Date) == filter_date)
+        
     notices = notices_query.order_by(Notice.created_at.desc()).all()
-    return render_template('admin/notices.html', notices=notices, curr_search=search)
+    return render_template('admin/notices.html', notices=notices, curr_search=search, curr_date=filter_date)
 
 @admin_bp.route('/notices/delete/<int:notice_id>', methods=['POST'])
 @login_required
@@ -506,16 +513,14 @@ def generate_payroll():
         flash('Invalid month format.', 'danger')
         return redirect(url_for('admin.payroll'))
         
-    # Check if payroll already exists for this month
-    existing = Payroll.query.filter_by(year=year, month=month).first()
-    if existing:
-        flash(f'Payroll for {month_str} has already been generated.', 'warning')
-        return redirect(url_for('admin.payroll'))
-        
-    # Generate payroll records for all active employees/interns using PayrollService
+    # We no longer block if the batch exists. Instead, we update unpaid records.
     from utils.payroll_service import PayrollService
     users = User.query.filter(User.role != 'admin', User.is_active == True).all()
-    count: int = 0
+    
+    generated: int = 0
+    updated: int = 0
+    skipped: int = 0
+    
     for user in users:
         if not user.profile:
             continue
@@ -524,29 +529,51 @@ def generate_payroll():
         salary_data = PayrollService.calculate_monthly_salary(user.id, month, year)
         if not salary_data:
             continue
-
-        pr = Payroll(
-            user_id=user.id,
-            month=month,
-            year=year,
-            snapshot_base_salary=user.profile.base_salary,
-            snapshot_hra=user.profile.hra,
-            snapshot_transport=user.profile.transport_allowance,
-            overtime_earnings=0.0,
-            lop_deduction=salary_data['deductions'],
-            gross_pay=salary_data['gross_pay'],
-            net_pay=salary_data['net_pay'],
-            status='generated'
-        )
-        db.session.add(pr)
-        count = count + 1
+            
+        pr = Payroll.query.filter_by(user_id=user.id, month=month, year=year).first()
+        
+        if pr:
+            if pr.status == 'paid':
+                skipped += 1
+                continue
+            
+            # Update existing un-paid record
+            pr.lop_deduction = salary_data['deductions']
+            pr.gross_pay = salary_data['gross_pay']
+            pr.net_pay = salary_data['net_pay']
+            pr.snapshot_base_salary = user.profile.base_salary
+            pr.snapshot_hra = user.profile.hra
+            pr.snapshot_transport = user.profile.transport_allowance
+            updated += 1
+        else:
+            # Create new record
+            pr = Payroll(
+                user_id=user.id,
+                month=month,
+                year=year,
+                snapshot_base_salary=user.profile.base_salary,
+                snapshot_hra=user.profile.hra,
+                snapshot_transport=user.profile.transport_allowance,
+                overtime_earnings=0.0,
+                lop_deduction=salary_data['deductions'],
+                gross_pay=salary_data['gross_pay'],
+                net_pay=salary_data['net_pay'],
+                status='generated'
+            )
+            db.session.add(pr)
+            generated += 1
         
     db.session.commit()
     
-    if count > 0:
-        db.session.add(AuditLog(user_id=current_user.id, action=f"Generated Payroll batch for {month_str}", ip_address=request.remote_addr))
+    total_processed = generated + updated
+    if total_processed > 0:
+        db.session.add(AuditLog(user_id=current_user.id, action=f"Generated/Updated Payroll batch for {month_str}", ip_address=request.remote_addr))
         db.session.commit()
-        flash(f'Successfully generated payroll for {count} employees for {month_str}.', 'success')
+        
+        msg = f'Success! Generated {generated} new records and updated {updated} existing records for {month_str}.'
+        if skipped > 0:
+            msg += f' (Skipped {skipped} already paid).'
+        flash(msg, 'success')
     else:
         flash('No active employees found to generate payroll.', 'info')
         
@@ -936,67 +963,153 @@ def complete_role(user_id):
 @login_required
 @admin_required
 def get_stats():
-    # 1. Base Counts (Filtered for Active Users Only)
+    now = get_nepal_time()
+    today = now.date()
+
+    # ── 1. Head Counts ─────────────────────────────────────────────────────────
     total_employees = User.query.filter_by(role='employee', is_active=True).count()
-    total_interns = User.query.filter_by(role='intern', is_active=True).count()
-    total_students = User.query.filter_by(role='student', is_active=True).count()
-    
-    today = get_nepal_time().date()
-    # Unique users checked in today (Including Weekends)
+    total_interns   = User.query.filter_by(role='intern',   is_active=True).count()
+    total_students  = User.query.filter_by(role='student',  is_active=True).count()
+    total_active    = total_employees + total_interns + total_students
+
+    # ── 1b. All-time totals (active + inactive) ────────────────────────────────
+    all_employees   = User.query.filter_by(role='employee').count()
+    all_interns     = User.query.filter_by(role='intern').count()
+    all_students    = User.query.filter_by(role='student').count()
+
+    # ── 2. Attendance Today ────────────────────────────────────────────────────
     start_of_day = datetime.combine(today, datetime.min.time())
-    end_of_day = datetime.combine(today, datetime.max.time())
-    
+    end_of_day   = datetime.combine(today, datetime.max.time())
+
     attendance_today = db.session.query(Attendance.user_id).filter(
         Attendance.check_in >= start_of_day,
         Attendance.check_in <= end_of_day
     ).distinct().count()
-    
-    pending_leaves = LeaveRequest.query.filter_by(status='pending').count()
-    
-    # 2. Active Department Distribution (Doughnut)
+
+    # Absent today = active staff who have NOT checked in
+    absent_today = max(0, (total_employees + total_interns) - attendance_today)
+    attendance_rate = round((attendance_today / (total_employees + total_interns) * 100), 1) if (total_employees + total_interns) > 0 else 0.0
+
+    # ── 3. Leaves ──────────────────────────────────────────────────────────────
+    pending_leaves  = LeaveRequest.query.filter_by(status='pending').count()
+    approved_leaves = LeaveRequest.query.filter_by(status='approved').count()
+    rejected_leaves = LeaveRequest.query.filter_by(status='rejected').count()
+    total_decided   = approved_leaves + rejected_leaves
+    leave_approval_rate = round((approved_leaves / total_decided * 100), 1) if total_decided > 0 else 0.0
+
+    # ── 4. Open Queries ────────────────────────────────────────────────────────
+    open_queries = ContactQuery.query.filter(
+        db.or_(ContactQuery.status == 'open', ContactQuery.status == 'pending', ContactQuery.status == None)
+    ).count()
+
+    # ── 5. New Joinings This Month ─────────────────────────────────────────────
+    new_joinings = db.session.query(EmployeeProfile.id).join(User).filter(
+        db.extract('month', EmployeeProfile.joining_date) == today.month,
+        db.extract('year',  EmployeeProfile.joining_date) == today.year,
+        User.is_active == True
+    ).count()
+
+    # ── 6. Completed Interns & Students (workshop_status = 'Completed') ────────────
+    completed_interns = db.session.query(EmployeeProfile.id).join(User).filter(
+        User.role == 'intern',
+        EmployeeProfile.workshop_status == 'Completed'
+    ).count()
+
+    completed_students = db.session.query(EmployeeProfile.id).join(User).filter(
+        User.role == 'student',
+        EmployeeProfile.workshop_status == 'Completed'
+    ).count()
+
+    # ── 7. Department Distribution (Doughnut) ──────────────────────────────────
     dept_query = db.session.query(
-        EmployeeProfile.department, 
+        EmployeeProfile.department,
         db.func.count(EmployeeProfile.id)
     ).join(User).filter(User.is_active == True).group_by(EmployeeProfile.department).all()
-    
-    dept_labels = [d[0] for d in dept_query]
-    dept_values = [d[1] for d in dept_query]
-    
-    # 3. Monthly Leave Trends (Improved Month Alignment)
-    leave_trends = []
-    trend_labels = []
-    now = get_nepal_time()
-    
+
+    dept_labels = [d[0] for d in dept_query if d[0]]
+    dept_values = [d[1] for d in dept_query if d[0]]
+
+    # ── 8. Monthly Leave Trends (Bar – last 6 months) ─────────────────────────
+    leave_trends  = []
+    trend_labels  = []
     for i in range(5, -1, -1):
-        # Calculate start and end of target month
-        # Subtract months correctly
-        target_year = now.year
         target_month = now.month - i
+        target_year  = now.year
         while target_month <= 0:
             target_month += 12
-            target_year -= 1
-            
+            target_year  -= 1
         month_name = datetime(target_year, target_month, 1).strftime('%b')
-        
         count = LeaveRequest.query.filter(
             db.extract('month', LeaveRequest.applied_on) == target_month,
-            db.extract('year', LeaveRequest.applied_on) == target_year,
+            db.extract('year',  LeaveRequest.applied_on) == target_year,
             LeaveRequest.status == 'approved'
         ).count()
-        
         trend_labels.append(month_name)
         leave_trends.append(count)
 
+    # ── 9. Recent Activity Feed (last 6 audit logs) ───────────────────────────
+    recent_logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(6).all()
+    recent_activity = []
+    for log in recent_logs:
+        actor = User.query.get(log.user_id)
+        actor_name = (actor.profile.full_name.split()[0] if actor and actor.profile and actor.profile.full_name else (actor.email.split('@')[0] if actor else 'System'))
+        recent_activity.append({
+            'action':  log.action,
+            'actor':   actor_name,
+            'time':    log.timestamp.strftime('%d %b, %H:%M') if log.timestamp else '—',
+            'ip':      log.ip_address or '—'
+        })
+
+    # ── 10. Upcoming Approved Leaves (next 7 days) ────────────────────────────
+    next_week = today + timedelta(days=7)
+    upcoming_leaves_q = LeaveRequest.query.join(User).join(EmployeeProfile).filter(
+        LeaveRequest.status == 'approved',
+        LeaveRequest.start_date >= today,
+        LeaveRequest.start_date <= next_week
+    ).order_by(LeaveRequest.start_date.asc()).limit(6).all()
+
+    upcoming_leaves = []
+    for lr in upcoming_leaves_q:
+        profile = lr.user.profile
+        upcoming_leaves.append({
+            'name':       profile.full_name if profile else lr.user.email,
+            'dept':       profile.department if profile else '—',
+            'leave_type': lr.leave_type.title() if lr.leave_type else '—',
+            'start':      lr.start_date.strftime('%d %b'),
+            'end':        lr.end_date.strftime('%d %b'),
+        })
+
     return jsonify({
-        'total_employees': total_employees,
-        'total_interns': total_interns,
-        'total_students': total_students,
-        'attendance_today': attendance_today,
-        'pending_leaves': pending_leaves,
-        'dept_labels': dept_labels,
-        'dept_values': dept_values,
-        'trend_labels': trend_labels,
-        'leave_trends': leave_trends
+        # Head counts (active)
+        'total_employees':      total_employees,
+        'total_interns':        total_interns,
+        'total_students':       total_students,
+        'total_active':         total_active,
+        # Head counts (all-time totals)
+        'all_employees':        all_employees,
+        'all_interns':          all_interns,
+        'all_students':         all_students,
+        # Completed
+        'completed_interns':    completed_interns,
+        'completed_students':   completed_students,
+        # Attendance
+        'attendance_today':     attendance_today,
+        'absent_today':         absent_today,
+        'attendance_rate':      attendance_rate,
+        # Leaves
+        'pending_leaves':       pending_leaves,
+        'leave_approval_rate':  leave_approval_rate,
+        # Operations
+        'open_queries':         open_queries,
+        'new_joinings':         new_joinings,
+        # Charts
+        'dept_labels':          dept_labels,
+        'dept_values':          dept_values,
+        'trend_labels':         trend_labels,
+        'leave_trends':         leave_trends,
+        # Feeds
+        'recent_activity':      recent_activity,
+        'upcoming_leaves':      upcoming_leaves,
     })
 
 # ─── Staff Detail Views (New) ────────────────────────────────────────────────
@@ -1092,5 +1205,35 @@ def staff_attendance_events(user_id):
         })
         
     return jsonify(events)
+
+
+@admin_bp.route('/staff/reactivate/<int:user_id>', methods=['POST'])
+@login_required
+@admin_required
+def reactivate_staff(user_id):
+    """Reactivate a previously deactivated student or intern account."""
+    user = User.query.get_or_404(user_id)
+    if user.role == 'admin':
+        flash('Cannot modify admin accounts.', 'danger')
+        return redirect(url_for('admin.employees'))
+
+    profile = user.profile
+    user.is_active = True
+    if profile and profile.workshop_status == 'Completed':
+        profile.workshop_status = 'Ongoing'
+
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Reactivated Account: {profile.full_name if profile else user.email} (Role: {user.role})",
+        details=f"Account manually reactivated by {current_user.email}.",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+
+    ExcelSyncService.sync_role_to_excel(user.role)
+
+    flash(f'Account for {profile.full_name if profile else user.email} has been reactivated.', 'success')
+    target = 'admin.students' if user.role == 'student' else ('admin.interns' if user.role == 'intern' else 'admin.employees')
+    return redirect(url_for(target))
 
 

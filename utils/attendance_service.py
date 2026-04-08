@@ -83,39 +83,43 @@ class AttendanceService:
         record_map = {att.check_in.date(): att for att in records}
         
         has_changes = False
-        curr = start_date
+        # Calculate days until the first Saturday in the range
+        days_to_first_sat = (5 - start_date.weekday() + 7) % 7
+        curr = start_date + timedelta(days=days_to_first_sat)
+        
         while curr <= end_date:
-            if curr.weekday() == 5: # Saturday
-                existing = record_map.get(curr)
-                friday = curr - timedelta(days=1)
-                sunday = curr + timedelta(days=1)
-                
-                friday_att = record_map.get(friday)
-                sunday_att = record_map.get(sunday)
-                
-                is_fri_present = friday_att and friday_att.status not in ['absent', None]
-                is_sun_present = sunday_att and sunday_att.status not in ['absent', None]
-                
-                calculated_status = 'present' if (is_fri_present or is_sun_present) else 'absent'
-                is_weekend = (calculated_status == 'present')
-                
-                if existing:
-                    if existing.status != calculated_status:
-                        existing.status = calculated_status
-                        existing.is_weekend = is_weekend
-                        has_changes = True
-                else:
-                    dummy_time = datetime.combine(curr, datetime.min.time()).replace(hour=12)
-                    weekend_att = Attendance(
-                        user_id=user_id, 
-                        check_in=dummy_time, 
-                        check_out=dummy_time, 
-                        status=calculated_status, 
-                        is_weekend=is_weekend
-                    )
-                    db.session.add(weekend_att)
+            # We are now guaranteed to be on a Saturday
+            existing = record_map.get(curr)
+            friday = curr - timedelta(days=1)
+            sunday = curr + timedelta(days=1)
+            
+            friday_att = record_map.get(friday)
+            sunday_att = record_map.get(sunday)
+            
+            is_fri_present = friday_att and friday_att.status not in ['absent', None]
+            is_sun_present = sunday_att and sunday_att.status not in ['absent', None]
+            
+            calculated_status = 'present' if (is_fri_present or is_sun_present) else 'absent'
+            is_weekend = (calculated_status == 'present')
+            
+            if existing:
+                if existing.status != calculated_status:
+                    existing.status = calculated_status
+                    existing.is_weekend = is_weekend
                     has_changes = True
-            curr += timedelta(days=1)
+            else:
+                dummy_time = datetime.combine(curr, datetime.min.time()).replace(hour=12)
+                weekend_att = Attendance(
+                    user_id=user_id, 
+                    check_in=dummy_time, 
+                    check_out=dummy_time, 
+                    status=calculated_status, 
+                    is_weekend=is_weekend
+                )
+                db.session.add(weekend_att)
+                has_changes = True
+            
+            curr += timedelta(days=7) # Jump to next Saturday
         
         if has_changes:
             db.session.commit()
@@ -166,27 +170,40 @@ class AttendanceMonitor:
 
     def run(self):
         import os, time, subprocess
-        lock_file = os.path.join(self.app.root_path, 'attendance_monitor.lock')
+        # Moved to database/ folder to avoid triggering Flask's reloader in the root folder.
+        db_dir = os.path.join(self.app.root_path, 'database')
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+        lock_file = os.path.join(db_dir, 'attendance_monitor.lock')
         
         def is_pid_alive(pid):
-            try:
-                # Portable check for Windows using tasklist
-                output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}', '/NH'], 
-                                              stderr=subprocess.STDOUT, 
-                                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0).decode()
-                return str(pid) in output
-            except Exception:
-                return False
+            if os.name == 'posix':
+                # POSIX way to check for process existence without killing it
+                try:
+                    os.kill(pid, 0)
+                    return True
+                except OSError:
+                    return False
+            else:
+                try:
+                    # Windows fallback check
+                    output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}', '/NH'], 
+                                                  stderr=subprocess.STDOUT, 
+                                                  creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0).decode()
+                    return str(pid) in output
+                except Exception:
+                    return False
 
         if os.path.exists(lock_file):
             try:
                 with open(lock_file, 'r') as f:
                     old_pid = int(f.read().strip())
                 if not is_pid_alive(old_pid):
-                    print(f"Stale monitor lock found (PID {old_pid} is dead). Cleaning up...")
-                    os.remove(lock_file)
+                    # print(f"Stale monitor lock found (PID {old_pid} is dead). Cleaning up...")
+                    try: os.remove(lock_file)
+                    except: pass
                 else:
-                    print(f"Attendance Monitor already running under PID {old_pid}. Exiting.")
+                    # print(f"Attendance Monitor already running under PID {old_pid}. Exiting.")
                     return
             except (ValueError, OSError):
                 # File corrupted or locked, try to remove it
@@ -200,7 +217,7 @@ class AttendanceMonitor:
             self.lock_fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
             os.write(self.lock_fd, str(os.getpid()).encode())
         except OSError:
-            print("Could not acquire monitor lock. Another instance may have just started.")
+            # print("Could not acquire monitor lock. Another instance may have just started.")
             return
 
         print(f"Attendance Monitor started successfully (Lock acquired by PID {os.getpid()}).")
@@ -221,8 +238,9 @@ class AttendanceMonitor:
         for att in active_attendances:
             # 1. Inactivity Timeout (30 mins)
             if att.heartbeat_last and (now - att.heartbeat_last).total_seconds() > 1800: # 30 mins
+                user = User.query.get(att.user_id)
                 att.check_out = att.heartbeat_last
-                att.status = AttendanceService.calculate_status(att.check_in, att.check_out)
+                att.status = AttendanceService.calculate_status(att.check_in, att.check_out, role=user.role if user else 'employee')
                 has_changes = True
                 continue
                 

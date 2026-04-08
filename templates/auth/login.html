@@ -25,8 +25,8 @@
     </div>
 
     <!-- ===== RIGHT PANEL: Login Form ===== -->
-    <div class="w-full md:w-1/2 flex items-center justify-center bg-white" style="padding:3rem 4rem;">
-        <div style="width:100%;max-width:420px;">
+    <div class="w-full md:w-1/2 flex flex-col items-center justify-start bg-white overflow-y-auto main-scroll" style="padding:3rem 4rem; height: 100vh;">
+        <div style="width:100%;max-width:420px;margin: auto 0;padding: 2rem 0;">
 
             <!-- Mobile logo -->
             <div class="md:hidden" style="text-align:center;margin-bottom:2rem;">
@@ -145,9 +145,9 @@
                     <label style="display:block;font-size:0.78rem;font-weight:600;color:#374151;margin-bottom:0.5rem;">
                         User Email
                     </label>
-                    <input type="email" name="email" id="email_input" required
-                        class="portal-input" placeholder="admin@ems.com" pattern="[a-zA-Z0-9._%+-]+@ems\.com$"
-                        title="Email must be admin@ems.com or follow the format name-depart@ems.com">
+                    <input type="text" name="email" id="email_input" required
+                        class="portal-input" placeholder="admin@ems.com or ID"
+                        title="Enter your official Email or Employee/Student ID">
                 </div>
 
                 <!-- Password -->
@@ -326,94 +326,81 @@
 </div>
 
 <style>
-    @keyframes pulse {
-
-        0%,
-        100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.6;
-        }
-    }
-
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .opacity-25 {
-        opacity: 0.25;
-    }
-
-    .opacity-75 {
-        opacity: 0.75;
-    }
-
-    #signInBtn:disabled {
-        cursor: not-allowed;
-        opacity: 1;
-    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    
+    .opacity-25 { opacity: 0.25; }
+    .opacity-75 { opacity: 0.75; }
+    
+    #signInBtn:disabled { cursor: not-allowed; opacity: 1; }
 
     /* Flash Message Animation */
     @keyframes fadeOutUp {
-        0% {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        100% {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
+        0% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-20px); }
     }
+    .flash-message.fade-out { animation: fadeOutUp 0.6s ease forwards; opacity: 0; }
 
-    .flash-message.fade-out {
-        animation: fadeOutUp 0.6s ease forwards;
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-
-    /* ── Role Tab Buttons (responsive) ─────────────────────────────── */
+    /* Role Tab Buttons Custom Styles (Extending Tailwind) */
     .role-tabs-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 2px;
+        gap: 4px;
         background: #f3f4f6;
-        border-radius: 10px;
-        padding: 4px;
-        margin-bottom: 1.5rem;
+        border-radius: 12px;
+        padding: 5px;
+        margin-bottom: 1.75rem;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
     }
 
     .role-tab {
         flex: 1 1 0;
         min-width: 0;
-        padding: 0.6rem 0.25rem;
-        font-size: 0.72rem;
+        padding: 0.7rem 0.5rem;
+        font-size: 0.78rem;
         font-weight: 700;
         color: #6b7280;
         background: none;
         border: none;
-        border-radius: 8px;
+        border-radius: 9px;
         cursor: pointer;
         letter-spacing: 0.02em;
-        transition: all 0.2s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
         text-align: center;
     }
 
     .role-tab--active {
-        color: #e65c00;
-        background: #fff;
+        color: #ea580c;
+        background: #ffffff;
         font-weight: 800;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 12px rgba(234, 88, 12, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .role-tab:hover:not(.role-tab--active) {
+        color: #374151;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Portal Input Styles */
+    .portal-input {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        background: #f9fafb;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        color: #111827 !important;
+        transition: all 0.2s;
+    }
+
+    .portal-input:focus {
+        outline: none;
+        background: #ffffff !important;
+        color: #111827 !important;
+        border-color: #ea580c;
+        box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.08);
     }
 
     /* On very small screens (< 380px) stack into a 2×2 grid */
@@ -421,32 +408,16 @@
         .role-tabs-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px;
+            gap: 6px;
         }
 
         .role-tab {
-            padding: 0.5rem 0.25rem;
-            font-size: 0.68rem;
+            padding: 0.6rem 0.25rem;
+            font-size: 0.7rem;
         }
     }
-
-    .portal-input {
-        width: 100%;
-        box-sizing: border-box;
-        padding: 0.82rem 1rem;
-        border: 1.5px solid #e5e7eb;
-        border-radius: 10px;
-        font-size: 0.9rem;
-        color: #111827;
-        background: #f8fafc;
-        outline: none;
-        transition: box-shadow .2s, border-color .2s;
-    }
-
-    .portal-input:focus {
-        box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.2);
-        border-color: #ea580c;
-    }
+    
+    .strength-req { transition: color 0.3s ease; }
 </style>
 
 <script nonce="{{ csp_nonce() }}">
@@ -488,7 +459,8 @@
         }
 
         // Initial Visibility Logic (Immediate)
-        const needsLoc = (role !== 'admin');
+        // Initial Visibility Logic (Immediate)
+        const needsLoc = (role !== 'admin' && {{ 'true' if REQUIRE_LOCATION_VERIFICATION else 'false' }});
         const isLocVerified = inputLocationVerified ? (inputLocationVerified.value === 'true') : false;
 
         if (needsLoc) {
@@ -498,10 +470,11 @@
             if (textSigninReq && !isLocVerified) textSigninReq.style.display = 'block';
 
             if (btnSignIn) {
-                btnSignIn.disabled = !isLocVerified;
-                btnSignIn.style.background = isLocVerified ? '#ea580c' : '#f1f5f9';
-                btnSignIn.style.color = isLocVerified ? '#fff' : '#94a3b8';
-                btnSignIn.style.cursor = isLocVerified ? 'pointer' : 'not-allowed';
+                btnSignIn.disabled = false;
+                btnSignIn.style.background = isLocVerified ? '#ea580c' : '#f87171';
+                btnSignIn.style.color = '#fff';
+                btnSignIn.style.cursor = 'pointer';
+                btnSignIn.textContent = isLocVerified ? 'Sign In' : 'Sign In (Location Required)';
             }
         } else {
             // Admin role bypass UI
@@ -643,7 +616,7 @@
         
         const rangeSubtext = document.getElementById('range-subtext');
         if (rangeSubtext) {
-            rangeSubtext.textContent = 'You are verified at the Office location.';
+            rangeSubtext.textContent = 'Verification successful. You are authorized to sign in.';
             rangeSubtext.style.color = '#059669';
         }
 
@@ -660,6 +633,15 @@
             signInBtn.style.background = '#ea580c';
             signInBtn.style.color = '#fff';
             signInBtn.style.cursor = 'pointer';
+            signInBtn.textContent = 'Sign In'; // Reset text if it was changed
+        }
+
+        // Update GPS Pill to show success
+        const gpsPill = document.getElementById('gps-status-pill');
+        if (gpsPill) {
+            gpsPill.textContent = '✓ ACCESS GRANTED';
+            gpsPill.style.background = '#ecfdf5';
+            gpsPill.style.color = '#059669';
         }
     }
 
@@ -698,7 +680,8 @@
             const bypassPill = document.getElementById('bypass-pill');
 
             // Admins skip loc requirements anyway
-            if (role === 'admin' || data.has_bypass) {
+            const forceVerify = {{ 'true' if REQUIRE_LOCATION_VERIFICATION else 'false' }};
+            if (role === 'admin' || data.has_bypass || !forceVerify) {
                 bypassBanner.style.display = 'flex';
                 locBanner.style.display = 'none';
                 signinReqText.style.display = 'none';
@@ -821,12 +804,16 @@
         const pill = document.getElementById('gps-status-pill');
         if (!pill) return;
 
+        // If location is already verified by server, do not allow local browser checks to downgrade the status
+        const isVerified = document.getElementById('location_verified')?.value === 'true';
+        if (isVerified) return;
+
         if (state === 'active') {
             pill.textContent = '✓ GPS ON';
             pill.style.background = '#ecfdf5';
             pill.style.color = '#059669';
         } else if (state === 'denied') {
-            pill.textContent = '✗ BLOCKED';
+            pill.textContent = '✗ PERMISSION REQ';
             pill.style.background = '#fff1f2';
             pill.style.color = '#be123c';
         } else if (state === 'unavailable') {

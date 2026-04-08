@@ -60,6 +60,7 @@
 
     <!-- Table Card -->
     <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100/60 overflow-hidden">
+        <!-- Main Staff List -->
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
@@ -77,7 +78,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                     {% for user in users %}
-                    <tr class="group hover:bg-slate-50/40 transition-colors duration-200">
+                    <tr class="group hover:bg-slate-50/40 transition-colors duration-200 {{ 'opacity-60 bg-slate-50/30' if not user.is_active else '' }}">
                         <td class="px-5 py-3">
                             <div class="flex items-center space-x-3">
                                 <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-[#d46b08] font-black text-[10px] flex-shrink-0">
@@ -173,13 +174,18 @@
                                 </form>
 
                                 <!-- Complete Session (students & interns only) -->
-                                {% if user.role in ['student', 'intern'] %}
+                                {% if user.role in ['student', 'intern'] and user.profile.workshop_status != 'Completed' %}
                                 <a href="{{ url_for('admin.complete_role', user_id=user.id) }}"
                                    onclick="return confirm('Mark as completed? This will disable login access.')"
                                    class="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl hover:bg-purple-100 transition text-[9px] font-black uppercase tracking-widest">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     <span>Complete</span>
                                 </a>
+                                {% elif user.role in ['student', 'intern'] and user.profile.workshop_status == 'Completed' %}
+                                <span class="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-slate-100 text-slate-500 border border-slate-200 rounded-xl text-[9px] font-black uppercase tracking-widest cursor-default">
+                                    <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    <span>Completed</span>
+                                </span>
                                 {% endif %}
 
                             </div>
@@ -203,17 +209,28 @@
         </div>
     </div>
 
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce() }}">
+// Logic for staff directory management
 document.addEventListener('alpine:init', () => {
-    Alpine.data('employeeManagement', () => ({
-        // Logic for filters can go here if needed
-    }));
+    // Only register if not already present to avoid Alpine 3 conflict warnings
+    if (!Alpine.data('employeeManagement')) {
+        Alpine.data('employeeManagement', () => ({
+            // Search and filter state can go here
+        }));
+    }
 });
 
+/**
+ * Admin function to grant a temporary location bypass
+ */
 async function grantLocationBypass(userId, userName, btn) {
     if (!confirm(`Grant 24-hour location bypass to ${userName}?`)) return;
     
+    // Immediate UI feedback loop
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
     try {
         const response = await fetch(`/qr/api/grant-bypass/${userId}`, {
             method: 'POST',
@@ -222,28 +239,30 @@ async function grantLocationBypass(userId, userName, btn) {
                 'X-CSRFToken': '{{ csrf_token() }}'
             }
         });
+
         const data = await response.json();
         
-        if (data.success) {
+        if (response.ok && data.success) {
             if (window.showToast) {
                 window.showToast(data.message, 'success');
             }
-            // Update button style to show active bypass
-            btn.className = 'inline-flex items-center justify-center w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition';
-            btn.title = 'Bypass Active (Just Granted)';
+            // Transform button to "Active" state
+            btn.className = 'inline-flex items-center justify-center w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition shadow-sm';
+            btn.title = 'Bypass Active (Expires in 24h)';
+            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
         } else {
-            if (window.showToast) {
-                window.showToast('Error: ' + data.message, 'error');
-            } else {
-                alert('Error: ' + data.message);
-            }
+            throw new Error(data.message || 'Operation failed on server.');
         }
     } catch (err) {
+        console.error('Bypass Error:', err);
         if (window.showToast) {
-            window.showToast('Failed to grant bypass.', 'error');
+            window.showToast(err.message || 'Could not connect to server.', 'error');
         } else {
-            alert('Failed to grant bypass.');
+            alert('Error: ' + (err.message || 'Failed to grant bypass.'));
         }
+        // Revert button on error
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
     }
 }
 </script>

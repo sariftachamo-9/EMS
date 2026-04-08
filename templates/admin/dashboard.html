@@ -3,143 +3,351 @@
 {% block admin_title %}Operational Intelligence{% endblock %}
 
 {% block content %}
-<div class="space-y-10" x-data="dashboardStats()">
-    <!-- Quick Actions Top Bar -->
+<div class="space-y-8" x-data="dashboardStats()">
+
+    <!-- ── Page Header ─────────────────────────────────────────────────────── -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
             <h3 class="text-xl lg:text-2xl font-black text-slate-800 tracking-tight">System Overview</h3>
             <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Real-time enterprise metrics</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-            <a href="{{ url_for('admin.add_employee') }}" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-100">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+        <div class="flex flex-wrap items-center gap-2.5">
+            <a href="{{ url_for('admin.add_employee') }}" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-blue-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
                 <span>Add Employee</span>
             </a>
-            <a href="{{ url_for('admin.add_intern') }}" class="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-orange-100">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+            <a href="{{ url_for('admin.add_intern') }}" class="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-orange-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                 <span>Add Intern</span>
             </a>
-            <a href="{{ url_for('admin.add_student') }}" class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-emerald-100">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path></svg>
+            <a href="{{ url_for('admin.add_student') }}" class="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-emerald-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path></svg>
                 <span>Add Student</span>
             </a>
-            <a href="{{ url_for('admin.attendance') }}" class="flex items-center space-x-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-slate-100">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+            <a href="{{ url_for('admin.attendance') }}" class="flex items-center space-x-2 bg-slate-700 hover:bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-slate-100">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                 <span>Attendance</span>
             </a>
         </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-        <!-- Total Employees -->
-        <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
-            <div class="flex justify-between items-start mb-4">
-                <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                </div>
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Employees</span>
-            </div>
-            <h4 class="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight" x-text="stats.total_employees">--</h4>
-            <p class="text-[10px] lg:text-xs text-slate-400 font-bold mt-2 uppercase">Full-time Staff</p>
-        </div>
+    <!-- ── High-Density Metrics Ribbon ─────────────────────────────────────── -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-4">
 
-        <!-- Attendance Today -->
-        <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
-            <div class="flex justify-between items-start mb-4">
-                <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <!-- Employees -->
+        <a href="{{ url_for('admin.employees') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-blue-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Employees</span>
+                <div class="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                 </div>
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Attendance Today</span>
             </div>
-            <h4 class="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight" x-text="stats.attendance_today">--</h4>
-            <p class="text-[10px] lg:text-xs text-emerald-500 font-bold mt-2 uppercase">Currently Logged In</p>
+            <div class="mt-2">
+                <div class="flex items-end gap-1.5">
+                    <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.total_employees">--</h4>
+                    <span class="text-[10px] font-bold text-slate-400 mb-0.5 leading-none" x-text="'/ ' + stats.all_employees + ' total'"></span>
+                </div>
+                <p class="text-[9px] text-blue-500 font-bold uppercase truncate mt-1.5">Active / Total</p>
+            </div>
+        </a>
+
+        <!-- Interns -->
+        <a href="{{ url_for('admin.interns') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-orange-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Interns</span>
+                <div class="w-6 h-6 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+            </div>
+            <div class="mt-2">
+                <div class="flex items-end gap-1.5">
+                    <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.total_interns">--</h4>
+                    <span class="text-[10px] font-bold text-slate-400 mb-0.5 leading-none" x-text="'/ ' + stats.all_interns + ' total'"></span>
+                </div>
+                <p class="text-[9px] text-orange-500 font-bold uppercase truncate mt-1.5">Active / Total</p>
+            </div>
+        </a>
+
+        <!-- Students -->
+        <a href="{{ url_for('admin.students') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-emerald-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Students</span>
+                <div class="w-6 h-6 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                </div>
+            </div>
+            <div class="mt-2">
+                <div class="flex items-end gap-1.5">
+                    <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.total_students">--</h4>
+                    <span class="text-[10px] font-bold text-slate-400 mb-0.5 leading-none" x-text="'/ ' + stats.all_students + ' total'"></span>
+                </div>
+                <p class="text-[9px] text-emerald-500 font-bold uppercase truncate mt-1.5">Active / Total</p>
+            </div>
+        </a>
+
+        <!-- Attendance -->
+        <a href="{{ url_for('admin.attendance') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-teal-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Present</span>
+                <div class="w-6 h-6 bg-teal-50 rounded-lg flex items-center justify-center text-teal-500 group-hover:bg-teal-500 group-hover:text-white transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+            <div class="mt-2">
+                <div class="flex items-end justify-between">
+                    <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.attendance_today">--</h4>
+                    <span class="text-xs font-black text-teal-600 mb-0.5" x-text="stats.attendance_rate + '%'"></span>
+                </div>
+                <p class="text-[9px] text-teal-500 font-bold uppercase truncate mt-1.5">Checked In</p>
+            </div>
+        </a>
+
+        <!-- Absent -->
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm transition-all flex flex-col justify-between border-l-[3px] border-l-rose-500">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Absent</span>
+                <div class="w-6 h-6 bg-rose-50 rounded-lg flex items-center justify-center text-rose-500 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+            </div>
+            <div class="mt-2">
+                <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.absent_today">--</h4>
+                <p class="text-[9px] text-rose-500 font-bold uppercase truncate mt-1.5">Not Checked In</p>
+            </div>
         </div>
 
         <!-- Pending Leaves -->
-        <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
-            <div class="flex justify-between items-start mb-4">
-                <div class="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <a href="{{ url_for('admin.leave_requests') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-amber-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Leaves</span>
+                <div class="w-6 h-6 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </div>
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Leaves</span>
             </div>
-            <h4 class="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight" x-text="stats.pending_leaves">--</h4>
-            <p class="text-[10px] lg:text-xs text-orange-500 font-bold mt-2 uppercase tracking-tight">Requires Approval</p>
+            <div class="mt-2">
+                <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.pending_leaves">--</h4>
+                <p class="text-[9px] text-amber-500 font-bold uppercase truncate mt-1.5">Awaiting Approval</p>
+            </div>
+        </a>
+
+        <!-- Open Queries -->
+        <a href="{{ url_for('admin.employee_queries') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-violet-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Queries</span>
+                <div class="w-6 h-6 bg-violet-50 rounded-lg flex items-center justify-center text-violet-500 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                </div>
+            </div>
+            <div class="mt-2">
+                <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.open_queries">--</h4>
+                <p class="text-[9px] text-violet-500 font-bold uppercase truncate mt-1.5">Unresolved Tickets</p>
+            </div>
+        </a>
+        
+        <!-- New Joinings -->
+        <div class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm transition-all flex flex-col justify-between border-l-[3px] border-l-sky-500">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Joining</span>
+                <div class="w-6 h-6 bg-sky-50 rounded-lg flex items-center justify-center text-sky-500 transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                </div>
+            </div>
+            <div class="mt-2">
+                <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.new_joinings">--</h4>
+                <p class="text-[9px] text-sky-500 font-bold uppercase truncate mt-1.5">Joined This Month</p>
+            </div>
         </div>
 
-        <!-- Total Interns -->
-        <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition">
-            <div class="flex justify-between items-start mb-4">
-                <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"></path></svg>
+        <!-- Completed Interns -->
+        <a href="{{ url_for('admin.interns') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-fuchsia-500 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Done Interns</span>
+                <div class="w-6 h-6 bg-fuchsia-50 rounded-lg flex items-center justify-center text-fuchsia-500 group-hover:bg-fuchsia-500 group-hover:text-white transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
                 </div>
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Interns</span>
             </div>
-            <h4 class="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight" x-text="stats.total_interns">--</h4>
-            <p class="text-[10px] lg:text-xs text-orange-600 font-bold mt-2 uppercase">Training</p>
-        </div>
+            <div class="mt-2">
+                <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.completed_interns">--</h4>
+                <p class="text-[9px] text-fuchsia-500 font-bold uppercase truncate mt-1.5">Internship Done</p>
+            </div>
+        </a>
 
-        <!-- Total Students -->
-        <div class="bg-white p-6 lg:p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-md transition border-b-4 border-b-orange-400">
-            <div class="flex justify-between items-start mb-4">
-                <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        <!-- Completed Students -->
+        <a href="{{ url_for('admin.students') }}" class="bg-white p-3.5 rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group flex flex-col justify-between border-l-[3px] border-l-lime-600 cursor-pointer">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 mb-1">Done Students</span>
+                <div class="w-6 h-6 bg-lime-50 rounded-lg flex items-center justify-center text-lime-600 group-hover:bg-lime-600 group-hover:text-white transition-colors">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
                 </div>
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Students</span>
             </div>
-            <h4 class="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight" x-text="stats.total_students">--</h4>
-            <p class="text-[10px] lg:text-xs text-orange-500 font-bold mt-2 uppercase">Learning</p>
-        </div>
+            <div class="mt-2">
+                <h4 class="text-2xl font-black text-slate-800 tracking-tight leading-none" x-text="stats.completed_students">--</h4>
+                <p class="text-[9px] text-lime-600 font-bold uppercase truncate mt-1.5">Workshop Done</p>
+            </div>
+        </a>
     </div>
 
-    <!-- Charts Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
-        <!-- Doughnut Chart -->
-        <div class="bg-white p-6 lg:p-10 rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
-            <h4 class="text-lg font-black text-slate-800 mb-8 flex items-center">
-                <span class="w-2 h-6 bg-blue-500 rounded-full mr-3"></span>
+    <!-- ── Charts Row ──────────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Dept Distribution Doughnut -->
+        <div class="bg-white p-6 lg:p-8 rounded-[2rem] border border-slate-200/50 shadow-sm hover:shadow-md transition-all flex flex-col">
+            <h4 class="text-base font-black text-slate-800 mb-6 flex items-center">
+                <span class="w-2 h-5 bg-blue-500 rounded-full mr-3 flex-shrink-0"></span>
                 Department Distribution
             </h4>
-            <div class="h-[300px] lg:h-[400px] flex justify-center">
+            <div class="flex-grow flex items-center justify-center h-[260px]">
                 <canvas id="deptChart"></canvas>
             </div>
         </div>
 
-        <!-- Bar Chart -->
-        <div class="bg-white p-6 lg:p-10 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <h4 class="text-lg font-black text-slate-800 mb-8 flex items-center">
-                <span class="w-2 h-6 bg-indigo-500 rounded-full mr-3"></span>
-                Leave Trends
+
+        <!-- Leave Approval Rate Doughnut -->
+        <div class="bg-white p-6 lg:p-8 rounded-[2rem] border border-slate-200/50 shadow-sm hover:shadow-md transition-all flex flex-col">
+            <h4 class="text-base font-black text-slate-800 mb-6 flex items-center">
+                <span class="w-2 h-5 bg-emerald-500 rounded-full mr-3 flex-shrink-0"></span>
+                Leave Approval Rate
             </h4>
-            <div class="h-[300px] lg:h-[400px] w-full">
-                <canvas id="leaveChart"></canvas>
+            <div class="flex-grow flex flex-col items-center justify-center h-[260px] relative">
+                <canvas id="approvalChart"></canvas>
+                <div class="absolute flex flex-col items-center justify-center pointer-events-none">
+                    <span class="text-3xl font-black text-slate-800" x-text="stats.leave_approval_rate + '%'">--%</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Approved</span>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- ── Bottom Row: Activity Feed + Upcoming Leaves ──────────────────────── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Recent Activity Feed -->
+        <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 lg:p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h4 class="text-base font-black text-slate-800 flex items-center">
+                    <span class="w-2 h-5 bg-violet-500 rounded-full mr-3 flex-shrink-0"></span>
+                    Recent Activity
+                </h4>
+                <a href="{{ url_for('admin.audit_logs') }}" class="text-[10px] font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest transition">View All →</a>
+            </div>
+
+            <template x-if="stats.recent_activity && stats.recent_activity.length > 0">
+                <div class="space-y-3">
+                    <template x-for="(item, idx) in stats.recent_activity" :key="idx">
+                        <div class="flex items-start space-x-3 p-3 rounded-2xl hover:bg-slate-50 transition-colors group">
+                            <div class="w-8 h-8 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div class="flex-grow min-w-0">
+                                <p class="text-[11px] font-bold text-slate-800 leading-snug truncate" x-text="item.action">—</p>
+                                <p class="text-[10px] text-slate-400 font-medium mt-0.5">
+                                    <span class="font-bold text-orange-500" x-text="item.actor">—</span>
+                                    <span> · </span>
+                                    <span x-text="item.time">—</span>
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template x-if="!stats.recent_activity || stats.recent_activity.length === 0">
+                <div class="text-center py-10">
+                    <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <p class="text-slate-400 text-xs font-bold">No recent activity logged.</p>
+                </div>
+            </template>
+        </div>
+
+        <!-- Upcoming Leaves -->
+        <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 lg:p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h4 class="text-base font-black text-slate-800 flex items-center">
+                    <span class="w-2 h-5 bg-amber-500 rounded-full mr-3 flex-shrink-0"></span>
+                    Upcoming Leaves
+                    <span class="ml-2 text-[9px] bg-amber-100 text-amber-600 font-black uppercase tracking-widest px-2 py-0.5 rounded-lg">Next 7 Days</span>
+                </h4>
+                <a href="{{ url_for('admin.leave_requests') }}" class="text-[10px] font-black text-orange-500 hover:text-orange-600 uppercase tracking-widest transition">Manage →</a>
+            </div>
+
+            <template x-if="stats.upcoming_leaves && stats.upcoming_leaves.length > 0">
+                <div class="space-y-3">
+                    <template x-for="(lv, idx) in stats.upcoming_leaves" :key="idx">
+                        <div class="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                            <div class="flex items-center space-x-3 min-w-0">
+                                <div class="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-bold text-slate-800 truncate" x-text="lv.name">—</p>
+                                    <p class="text-[10px] text-slate-400 font-medium truncate">
+                                        <span x-text="lv.dept ? lv.dept.toUpperCase() : '—'"></span>
+                                        <span> · </span>
+                                        <span x-text="lv.leave_type">—</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="text-right flex-shrink-0 ml-2">
+                                <span class="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-lg whitespace-nowrap" x-text="lv.start + ' – ' + lv.end">—</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template x-if="!stats.upcoming_leaves || stats.upcoming_leaves.length === 0">
+                <div class="text-center py-10">
+                    <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <p class="text-slate-400 text-xs font-bold">No upcoming leaves in the next 7 days.</p>
+                </div>
+            </template>
+
+        </div>
+    </div>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-function dashboardStats() {
-    return {
+<!-- Chart.js — served locally -->
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/vendor/chart.min.js') }}"></script>
+
+<script nonce="{{ csp_nonce() }}">
+// ── Register dashboardStats with Alpine before it initialises ──────────────
+// Alpine is loaded with `defer`, so it fires alpine:init after DOM parse.
+// We must register via Alpine.data() at this point — not as a plain function —
+// so x-data="dashboardStats()" resolves correctly when Alpine evaluates it.
+document.addEventListener('alpine:init', () => {
+    Alpine.data('dashboardStats', () => ({
         stats: {
             total_employees: 0,
             total_interns: 0,
             total_students: 0,
+            total_active: 0,
+            all_employees: 0,
+            all_interns: 0,
+            all_students: 0,
+            completed_interns: 0,
+            completed_students: 0,
             attendance_today: 0,
+            absent_today: 0,
+            attendance_rate: 0,
             pending_leaves: 0,
+            leave_approval_rate: 0,
+            open_queries: 0,
+            new_joinings: 0,
             dept_labels: [],
             dept_values: [],
             trend_labels: [],
-            leave_trends: []
+            leave_trends: [],
+            recent_activity: [],
+            upcoming_leaves: []
         },
         deptChart: null,
-        leaveChart: null,
+        approvalChart: null,
 
         init() {
             this.fetchStats();
-            setInterval(() => this.fetchStats(), 60000); // 1m Polling
+            setInterval(() => this.fetchStats(), 60000); // Refresh every 60s
         },
 
         fetchStats() {
@@ -147,12 +355,15 @@ function dashboardStats() {
                 .then(r => r.json())
                 .then(data => {
                     this.stats = data;
-                    this.updateCharts();
-                });
+                    this.$nextTick(() => this.updateCharts());
+                })
+                .catch(err => console.error('Dashboard stats fetch error:', err));
         },
 
         updateCharts() {
-            // Dept Chart
+            const PALETTE = ['#3b82f6', '#6366f1', '#10b981', '#f97316', '#f43f5e', '#8b5cf6', '#0ea5e9', '#ec4899'];
+
+            // ── Dept Doughnut ──────────────────────────────
             if (!this.deptChart) {
                 this.deptChart = new Chart(document.getElementById('deptChart'), {
                     type: 'doughnut',
@@ -160,21 +371,21 @@ function dashboardStats() {
                         labels: this.stats.dept_labels,
                         datasets: [{
                             data: this.stats.dept_values,
-                            backgroundColor: ['#00a3ff', '#6366f1', '#10b981', '#f97316', '#f43f5e'],
+                            backgroundColor: PALETTE,
                             borderWidth: 0,
-                            hoverOffset: 30
+                            hoverOffset: 16
                         }]
                     },
                     options: {
-                        cutout: '65%',
+                        cutout: '70%',
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
                             legend: {
                                 position: 'bottom',
                                 labels: {
-                                    font: { family: 'Inter', weight: '800', size: 12 },
-                                    padding: 30,
+                                    font: { family: 'Inter', weight: '700', size: 11 },
+                                    padding: 16,
                                     usePointStyle: true,
                                     pointStyle: 'circle'
                                 }
@@ -188,46 +399,50 @@ function dashboardStats() {
                 this.deptChart.update();
             }
 
-            // Leave Chart
-            if (!this.leaveChart) {
-                this.leaveChart = new Chart(document.getElementById('leaveChart'), {
-                    type: 'bar',
+
+            // ── Leave Approval Doughnut ────────────────────
+            const approvalRate = this.stats.leave_approval_rate || 0;
+            const rejectionRate = parseFloat((100 - approvalRate).toFixed(1));
+            if (!this.approvalChart) {
+                this.approvalChart = new Chart(document.getElementById('approvalChart'), {
+                    type: 'doughnut',
                     data: {
-                        labels: this.stats.trend_labels,
+                        labels: ['Approved', 'Rejected / Pending'],
                         datasets: [{
-                            label: 'Leaves Taken',
-                            data: this.stats.leave_trends,
-                            backgroundColor: '#00a3ff',
-                            borderRadius: 12,
-                            barThickness: 40
+                            data: [approvalRate, rejectionRate],
+                            backgroundColor: ['#10b981', '#e2e8f0'],
+                            borderWidth: 0,
+                            hoverOffset: 8
                         }]
                     },
                     options: {
+                        cutout: '78%',
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: { color: '#f1f5f9', drawBorder: false },
-                                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: { family: 'Inter', weight: '700', size: 11 },
+                                    padding: 16,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle'
+                                }
                             },
-                            x: {
-                                grid: { display: false },
-                                ticks: { font: { weight: 'bold' }, color: '#94a3b8' }
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => ` ${ctx.label}: ${ctx.raw.toFixed(1)}%`
+                                }
                             }
                         }
                     }
                 });
             } else {
-                this.leaveChart.data.labels = this.stats.trend_labels;
-                this.leaveChart.data.datasets[0].data = this.stats.leave_trends;
-                this.leaveChart.update();
+                this.approvalChart.data.datasets[0].data = [approvalRate, rejectionRate];
+                this.approvalChart.update();
             }
         }
-    }
-}
+    }));
+});
 </script>
 {% endblock %}

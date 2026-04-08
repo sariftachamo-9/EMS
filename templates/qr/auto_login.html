@@ -11,15 +11,29 @@
             <svg class="w-10 h-10 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
         </div>
 
-        <h2 class="text-2xl font-black text-slate-800 tracking-tight leading-tight mb-2">Verifying Location</h2>
-        <p class="text-sm font-bold text-slate-400 mb-8 uppercase tracking-widest">{{ user_info.username }}</p>
+        <h2 class="text-2xl font-black text-slate-800 tracking-tight leading-tight mb-2">Secure Access</h2>
+        <p class="text-sm font-bold text-slate-500 mb-8 uppercase tracking-widest">{{ user_info.username }}</p>
 
-        <div id="status-container" class="bg-slate-50 border border-slate-100 p-5 rounded-2xl flex items-center justify-center space-x-4">
-            <div id="spinner" class="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-600 block"></div>
-            <p id="status-text" class="text-sm font-black text-slate-600">Requesting GPS Access...</p>
+        <div id="status-container" class="bg-slate-50 border border-slate-100 p-6 rounded-[2rem] transition-all duration-500">
+            <div id="spinner-box" class="flex items-center justify-center space-x-4 mb-4">
+                <div id="spinner" class="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-600 block"></div>
+                <p id="status-text" class="text-sm font-black text-slate-700">Initializing Handshake...</p>
+            </div>
+            
+            <!-- Step Indicators -->
+            <div class="space-y-3 px-4">
+                <div id="step-1" class="flex items-center space-x-3 opacity-30 transition-opacity">
+                    <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Identity Decrypted</span>
+                </div>
+                <div id="step-2" class="flex items-center space-x-3 opacity-30 transition-opacity">
+                    <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Geofence Validation</span>
+                </div>
+            </div>
         </div>
         
-        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-8">Secure Auto-Login</p>
+        <p class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-8">GN Global IOT Security System</p>
     </div>
 </div>
 
@@ -32,19 +46,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showError(msg) {
         spinner.classList.replace('block', 'hidden');
-        statusContainer.classList.replace('bg-slate-50', 'bg-rose-50');
+        statusContainer.classList.replace('bg-slate-50', 'bg-rose-50/50');
         statusContainer.classList.replace('border-slate-100', 'border-rose-100');
-        statusText.classList.replace('text-slate-600', 'text-rose-600');
+        statusText.classList.replace('text-slate-700', 'text-rose-600');
         statusText.innerText = msg;
     }
 
+    function completeStep(stepId) {
+        const step = document.getElementById(stepId);
+        if (step) {
+            step.classList.replace('opacity-30', 'opacity-100');
+            const dot = step.querySelector('div');
+            dot.classList.replace('bg-slate-300', 'bg-emerald-500');
+            dot.classList.add('shadow-[0_0_8px_rgba(16,185,129,0.6)]');
+        }
+    }
+
     if (!navigator.geolocation) {
-        showError("Geolocation not supported by device");
+        showError("GPS not supported by device");
         return;
     }
 
+    // Step 1: Initialized
+    setTimeout(() => completeStep('step-1'), 500);
+
     navigator.geolocation.getCurrentPosition(async (position) => {
-        statusText.innerText = "Authenticating...";
+        statusText.innerText = "Validating Geofence...";
         
         try {
             const response = await fetch('/qr/api/qr-login', {
@@ -63,26 +90,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             
             if (result.success) {
-                statusText.innerText = "Success! Redirecting...";
-                statusText.classList.replace('text-slate-600', 'text-emerald-600');
+                completeStep('step-2');
+                statusText.innerText = "Access Granted! Redirecting...";
+                statusText.classList.replace('text-slate-700', 'text-emerald-600');
                 spinner.classList.replace('border-orange-600', 'border-emerald-600');
-                statusContainer.classList.replace('bg-slate-50', 'bg-emerald-50');
-                statusContainer.classList.replace('border-slate-100', 'border-emerald-100');
-                setTimeout(() => window.location.href = result.redirect_url, 1000);
+                statusContainer.classList.add('bg-emerald-50/50', 'border-emerald-200');
+                setTimeout(() => window.location.href = result.redirect_url, 1200);
             } else {
-                showError(result.message || "Authentication Failed");
-                setTimeout(() => window.location.href = "/login", 3000);
+                showError(result.message || "Access Denied");
+                setTimeout(() => window.location.href = "/auth/login", 4000);
             }
         } catch (e) {
-            showError("Network Error");
+            showError("Network Security Error");
         }
     }, (error) => {
         if (error.code === error.PERMISSION_DENIED) {
-            showError("Please allow location access to log in.");
+            showError("Location access required for this badge.");
         } else {
-            showError("Failed to get location.");
+            showError("GPS Signal Lost. Please retry.");
         }
-    }, { enableHighAccuracy: true, timeout: 5000 });
+    }, { enableHighAccuracy: true, timeout: 8000 });
 });
 </script>
 {% endblock %}

@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
     <title>EMS - Enterprise Employee Management System</title>
-    <!-- Tailwind CSS -->
-    <script nonce="{{ csp_nonce() }}" src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js -->
-    <script nonce="{{ csp_nonce() }}" defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Tailwind CSS (Local) -->
+    <script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/vendor/tailwind.min.js') }}"></script>
+    <!-- Alpine.js (Local) -->
+    <script nonce="{{ csp_nonce() }}" defer src="{{ url_for('static', filename='js/vendor/alpine.min.js') }}"></script>
     <!-- Google Fonts: Inter, Outfit, JetBrains Mono -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <!-- Enterprise Custom CSS -->
@@ -171,12 +172,16 @@
                                 {% endfor %}
                                 
                                 {% if current_user.role in ['employee', 'intern', 'student'] %}
-                                <a href="{{ url_for('staff.my_payslips') }}" class="relative h-20 flex items-center px-2 text-sm font-bold transition-colors {{ 'text-orange-600' if request.path == url_for('staff.my_payslips') else 'text-slate-700 hover:text-slate-900' }}">
-                                    <span>{% if current_user.role == 'student' %}My Fees{% elif current_user.role == 'intern' %}Stipends{% else %}Payslips{% endif %}</span>
-                                    {% if request.path == url_for('staff.my_payslips') %}
-                                    <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full"></div>
+                                    {% if (current_user.role == 'intern' or current_user.role == 'student') and (not current_user.profile or (current_user.profile.base_salary or 0) <= 0) %}
+                                        {# Skip stipend/fees link if 0 #}
+                                    {% else %}
+                                        <a href="{{ url_for('staff.my_payslips') }}" class="relative h-20 flex items-center px-2 text-sm font-bold transition-colors {{ 'text-orange-600' if request.path == url_for('staff.my_payslips') else 'text-slate-700 hover:text-slate-900' }}">
+                                            <span>{% if current_user.role == 'student' %}My Fees{% elif current_user.role == 'intern' %}Stipends{% else %}Payslips{% endif %}</span>
+                                            {% if request.path == url_for('staff.my_payslips') %}
+                                            <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600 rounded-full"></div>
+                                            {% endif %}
+                                        </a>
                                     {% endif %}
-                                </a>
                                 {% endif %}
                             </div>
 
@@ -213,10 +218,14 @@
                                 <span>Leaves</span>
                             </a>
                             {% if current_user.role in ['employee', 'intern', 'student'] %}
-                            <a href="{{ url_for('staff.my_payslips') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.my_payslips') else 'text-slate-600 hover:bg-slate-50' }} transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
-                                <span>{% if current_user.role == 'student' %}My Fees{% elif current_user.role == 'intern' %}Stipends{% else %}Payslips{% endif %}</span>
-                            </a>
+                                {% if (current_user.role == 'intern' or current_user.role == 'student') and (not current_user.profile or (current_user.profile.base_salary or 0) <= 0) %}
+                                    {# Skip mobile link if 0 #}
+                                {% else %}
+                                    <a href="{{ url_for('staff.my_payslips') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold {{ 'bg-orange-50 text-orange-600' if request.path == url_for('staff.my_payslips') else 'text-slate-600 hover:bg-slate-50' }} transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                                        <span>{% if current_user.role == 'student' %}My Fees{% elif current_user.role == 'intern' %}Stipends{% else %}Payslips{% endif %}</span>
+                                    </a>
+                                {% endif %}
                             {% endif %}
                             <div class="pt-2 border-t border-slate-100">
                                 <a href="{{ url_for('auth.logout') }}" class="flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-bold text-rose-600 hover:bg-rose-50 transition">
@@ -272,9 +281,17 @@
             });
         });
 
-        // Global helper for non-Alpine components
-        window.showToast = (message, type, duration) => {
-            Alpine.store('toasts').add(message, type, duration);
+        // Global helper for non-Alpine components with resilience checks
+        window.showToast = (message, type = 'info', duration = 3000) => {
+            try {
+                if (window.Alpine && Alpine.store('toasts')) {
+                    Alpine.store('toasts').add(message, type, duration);
+                } else {
+                    console.warn('Toast requested but Alpine toasts store not ready:', message);
+                }
+            } catch (e) {
+                console.error('Error showing toast:', e);
+            }
         }
     </script>
     <div class="fixed bottom-10 right-10 z-[1001] space-y-4" x-data x-cloak>

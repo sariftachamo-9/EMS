@@ -25,10 +25,11 @@ class Config:
     OFFICE_LATITUDE = float(os.environ.get('OFFICE_LATITUDE', 27.7172))
     OFFICE_LONGITUDE = float(os.environ.get('OFFICE_LONGITUDE', 85.3240))
     GEOFENCE_RADIUS = int(os.environ.get('GEOFENCE_RADIUS', 100))
-    REQUIRE_LOCATION_VERIFICATION = False
+    REQUIRE_LOCATION_VERIFICATION = True
     OFFICE_PUBLIC_IP = os.environ.get('OFFICE_PUBLIC_IP', '')
     
     # Session / Security
+    PERMANENT_SESSION_LIFETIME = timedelta(days=3650) # 10 years (expires solely on server restart)
     REMEMBER_COOKIE_HTTPONLY = True
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'

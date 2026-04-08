@@ -9,7 +9,7 @@ def generate_staff_id(role, department):
     if role == 'employee':
         prefix = "EM"
     elif role == 'intern':
-        prefix = "TRN"
+        prefix = "ITN"
     elif role == 'student':
         prefix = "ST"
     else:

@@ -46,9 +46,14 @@ def qr_login(token):
 
     # STAFF: Direct Login (QR Login Bypass)
     if user.role != 'admin':
-        # SUCCESS (Phase 1): Instant Login for Staff/Interns/Students
+        # SUCCESS (Phase 1): Instant Login for Staff/Interns/Students with consistent tokens
+        import secrets
+        token = secrets.token_hex(16)
+        user.current_session_id = token
+        session['session_token'] = token
+        
         login_user(user)
-        session['session_version'] = current_app.config.get('SESSION_VERSION', '1')
+        session['session_version'] = current_app.config.get('BOOT_ID')
     else:
         # ADMIN: Security check required
         # For Admin QR, we still require a password check (Hybrid Security)
@@ -109,6 +114,11 @@ def qr_password_check(token):
     if request.method == 'POST':
         password = request.form.get('password')
         if check_password_hash(user.password_hash, password):
+            import secrets
+            token = secrets.token_hex(16)
+            user.current_session_id = token
+            session['session_token'] = token
+            
             login_user(user)
             db.session.add(AuditLog(user_id=user.id, action="Admin identity verified via QR + Password", ip_address=request.remote_addr))
             db.session.commit()
@@ -159,18 +169,21 @@ def login():
             flash('Email is required.', 'danger')
             return render_template('auth/login.html', selected_role=request.form.get('role', 'admin'))
             
+        # Look up user by Email OR Employee ID
         user = User.query.filter_by(email=email).first()
+        if not user:
+            # Fallback search by Employee ID (case-insensitive)
+            user = User.query.join(EmployeeProfile).filter(
+                db.func.lower(EmployeeProfile.employee_id) == email.lower()
+            ).first()
         
         if user:
             is_valid = check_password_hash(user.password_hash, password)
             if is_valid:
-                # SUCCESS (Phase 1): OTP flow
-                selected_role = request.form.get('role')
-                
-                # Enforce that the selected portal tab matches the user's actual role
-                if user.role != selected_role:
-                    flash(f'Identity Error: You are registered as an {user.role.upper()}. Please switch to the {user.role.capitalize()} Portal tab.', 'danger')
-                    return render_template('auth/login.html', selected_role=selected_role)
+                # SUCCESS (Phase 1): Trigger OTP Flow
+                # Note: We now ignore the raw selected_role tab and use the user's actual role
+                # This fixes the "Identity Error" friction for Students/Interns.
+                selected_role = user.role
                 
                 # IMPORTANT: Reset lockout attempts immediately upon correct password
                 if block:
@@ -202,8 +215,10 @@ def login():
                 return redirect(url_for('auth.verify_otp'))
             else:
                 current_app.logger.warning(f"Login failed: Password mismatch for {email}")
+                flash("Invalid email or password.", "danger")
         else:
             current_app.logger.warning(f"Login failed: User not found - {email}")
+            flash("Invalid email or password.", "danger")
 
         # failure handling (Graduated Lockout Policy)
         if not block:
@@ -282,7 +297,7 @@ def verify_otp():
             session['session_token'] = token
             
             login_user(user)
-            session['session_version'] = current_app.config.get('SESSION_VERSION', '1')
+            session['session_version'] = current_app.config.get('BOOT_ID')
             session.permanent = True # Enable 24-hour location re-verification policy
             session.pop('pending_user_id', None)
             

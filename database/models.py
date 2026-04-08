@@ -183,6 +183,8 @@ class Notice(db.Model):
     content = db.Column(db.Text, nullable=False)   # Formal message
     is_active = db.Column(db.Boolean, default=True) # Toggle visibility
     role_restriction = db.Column(db.String(20)) # all, admin, employee
+    target_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # private notice
+    notice_type = db.Column(db.String(100), default='General Announcement Notices')
     created_at = db.Column(db.DateTime, default=get_nepal_time)
 
 class OfficeSettings(db.Model):

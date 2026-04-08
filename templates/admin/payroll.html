@@ -4,7 +4,7 @@
 
 {% block content %}
 <!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script nonce="{{ csp_nonce() }}" src="{{ url_for('static', filename='js/vendor/chart.min.js') }}"></script>
 
 <div class="space-y-6">
     
@@ -89,7 +89,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     document.addEventListener("DOMContentLoaded", function() {
         // Line Chart (Salary Expenditure Trend)
         const trendCtx = document.getElementById('trendChart').getContext('2d');

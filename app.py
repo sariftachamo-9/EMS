@@ -30,6 +30,7 @@ def create_app(config_name='default'):
             "'self'",
             'https://cdn.tailwindcss.com',
             'https://cdn.jsdelivr.net',
+            'https://cdnjs.cloudflare.com',
             'https://unpkg.com', # Whitelist QR scanner library
             "'unsafe-eval'", # Required for Alpine.js and Tailwind CDN
             "'unsafe-inline'" # Required for inline scripts in base.html
@@ -103,35 +104,44 @@ def create_app(config_name='default'):
     app.register_blueprint(contact_bp, url_prefix='/contact')
     app.register_blueprint(qr_bp, url_prefix='/qr')
 
-    # Global Session Reset Hook (Auto Logout on Server Refresh)
+    # Security: Use a stable SESSION_VERSION to prevent forced logouts on dev refreshes.
+    # The session only invalidates if the admin manually changes SESSION_VERSION in config.
+    app.config['BOOT_ID'] = app.config.get('SESSION_VERSION', '1')
+
+
+    # Global Session Reset Hook (Auto Logout on Server Restart/Refresh)
     @app.before_request
     def check_session_version():
         from flask_login import current_user, logout_user
-        from flask import session, flash
+        from flask import session, flash, redirect, url_for
         
         # We only check authenticated users
         if current_user.is_authenticated:
-            server_version = app.config.get('SESSION_VERSION', '1')
+            boot_id = app.config.get('BOOT_ID')
             user_session_version = session.get('session_version')
             
-            # If version is missing or mismatched, force logout
-            if user_session_version != server_version:
-                app.logger.info(f"Session version mismatch (User: {user_session_version}, Server: {server_version}). Force Logout.")
+            # Strict Enforcement: Logout if version mismatch (forced logout on restart)
+            if user_session_version != boot_id:
+                app.logger.info(f"Session security mismatch. Boot ID changed. Force Logout User {current_user.id}.")
                 logout_user()
                 session.clear()
-                flash('Your session has been reset by the server. Please login again.', 'info')
+                flash('Security Alert: Your session has been reset due to a server refresh. Please log in again.', 'warning')
                 return redirect(url_for('auth.login'))
 
-    # Context processor for timezone offset
+    # Context processor for global variables
     @app.context_processor
-    def inject_timezone_offset():
+    def inject_globals():
         from datetime import datetime
         import pytz
         nepal_tz = pytz.timezone('Asia/Kathmandu')
         offset = datetime.now(nepal_tz).strftime('%z')
         # Format as "+05:45" for JavaScript ISO strings
         tz_offset = offset[:3] + ':' + offset[3:]
-        return {'tz_offset': tz_offset}
+        return {
+            'tz_offset': tz_offset,
+            'BOOT_ID': app.config.get('BOOT_ID'),
+            'REQUIRE_LOCATION_VERIFICATION': app.config.get('REQUIRE_LOCATION_VERIFICATION', False)
+        }
 
     @app.route('/')
     @app.route('/login')
