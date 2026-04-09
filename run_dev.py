@@ -21,6 +21,11 @@ def run_dev():
     # Initialize the Flask app
     app = create_app('development')
     
+    # Start the scheduler
+    if hasattr(app, 'scheduler'):
+        with app.app_context():
+            app.scheduler.start()
+    
     # Try to use ngrok for public URL testing if installed
     # ONLY start ngrok in the main process, not the reloader child
     if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':

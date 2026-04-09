@@ -89,6 +89,15 @@
             gap: 1rem !important;
         }
     }
+
+    /* Notice Popup Animation */
+    @keyframes notice-slip-fade {
+        0% { transform: translateY(-20px); opacity: 0; }
+        5% { transform: translateY(0); opacity: 1; }
+        95% { transform: translateY(0); opacity: 1; }
+        100% { transform: translateY(-20px); opacity: 0; }
+    }
+    .notice-popup { animation: notice-slip-fade 4s ease-in-out forwards; }
 </style>
 
 <!-- SERVER DATA BRIDGE (Prevents JS Linting Errors) -->
@@ -108,16 +117,53 @@
      data-checkout-url="{{ url_for('staff.check_out') }}"
      data-break-start-url="{{ url_for('staff.start_break') }}"
      data-break-end-url="{{ url_for('staff.end_break') }}"
-     data-heartbeat-url="{{ url_for('staff.heartbeat') }}"
      data-initial-score="{{ initial_stats.attendance_score }}"
      data-initial-leaves="{{ initial_stats.leave_balance }}"
      data-initial-workshop="{{ initial_stats.workshop_status }}"
      data-initial-payment="{{ initial_stats.payment_status }}"
      data-csrf="{{ csrf_token() }}">
 </div>
+{% if show_notice_popup and latest_notice %}
+<div class="fixed top-24 left-1/2 -translate-x-1/2 z-[200] w-full max-w-lg px-6 pointer-events-none">
+    <div class="notice-popup bg-white border-2 border-orange-100 shadow-2xl rounded-3xl p-6 flex items-start space-x-6">
+        <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center flex-shrink-0 text-orange-600">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+        </div>
+        <div class="flex-1">
+            <p class="text-[10px] font-black text-orange-600 uppercase tracking-widest mb-1">System Update</p>
+            <h4 class="text-lg font-black text-slate-800 leading-tight mb-1">{{ latest_notice.title }}</h4>
+            <p class="text-sm text-slate-600 line-clamp-2">{{ latest_notice.content }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="min-h-screen bg-[#f8fafc] px-4 py-8 md:px-10 lg:py-12" x-data="dashboardUI()">
-    <div class="max-w-[1500px] mx-auto space-y-12">
+    <div class="max-w-[1500px] mx-auto space-y-8">
+        <!-- GPS Location / Bypass Status Banner -->
+        <div x-show="showGpsBanner" x-cloak x-transition
+             class="rounded-[2rem] p-5 flex items-center justify-between transition-all duration-300 shadow-sm border"
+             :class="gpsStatus === 'inside' ? 'bg-emerald-50/50 border-emerald-100' : gpsStatus === 'outside' ? 'bg-rose-50/50 border-rose-100' : 'bg-amber-50/50 border-amber-100'">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm"
+                     :class="gpsStatus === 'inside' ? 'bg-emerald-100 text-emerald-600' : gpsStatus === 'outside' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'">
+                    <svg x-show="gpsStatus === 'inside'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <svg x-show="gpsStatus === 'outside'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <svg x-show="gpsStatus === 'checking'" class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    <svg x-show="gpsStatus === 'denied'" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                </div>
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Location Status</p>
+                    <p class="text-sm font-bold"
+                       :class="gpsStatus === 'inside' ? 'text-emerald-700' : gpsStatus === 'outside' ? 'text-rose-700' : 'text-amber-700'"
+                       x-text="gpsMessage">Checking location...</p>
+                </div>
+            </div>
+            <button @click="refreshGps()" x-show="!checkedIn && !shiftCompleted"
+                    class="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+                Refresh
+            </button>
+        </div>
         
         <!-- SECTION 1: HEADER & COMMAND CENTER -->
         <header class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
@@ -130,6 +176,14 @@
                 <h1 class="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight font-['Outfit']">
                     Welcome, <span class="text-orange-600">{{ current_user.profile.full_name.split(' ')[0] if current_user.profile else current_user.username }}</span>
                 </h1>
+                
+                {% if current_user.location_bypass_until and current_user.location_bypass_until > now %}
+                <div class="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
+                    <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <span class="text-xs font-black uppercase tracking-widest text-emerald-700">Location Bypass Active</span>
+                    <span class="text-[10px] font-bold text-emerald-600/80 ml-2">(Expires: {{ current_user.location_bypass_until.strftime('%H:%M, %b %d') }})</span>
+                </div>
+                {% endif %}
             </div>
 
             <!-- UNIFIED COMMAND CENTER -->
@@ -361,12 +415,32 @@ function dashboardUI() {
         otRate: parseFloat(bridge.otRate || 0),
         timerPulseClass: 'bg-slate-300',
 
+        // GPS Location Properties
+        gpsStatus: 'checking',
+        gpsMessage: 'Detecting your location...',
+        gpsDistance: null,
+        gpsLat: null,
+        gpsLon: null,
+        showGpsBanner: true,
+        hasBypass: {{ 'true' if current_user.location_bypass_until and current_user.location_bypass_until > now else 'false' }},
+
         // Init
         init() {
             console.log('EMS: Rebuilt Dashboard V2 initializing.');
             this.initSession();
             this.fetchStats();
             this.$nextTick(() => this.initCalendar());
+
+            // Handle GPS initialization
+            if (this.hasBypass) {
+                this.gpsStatus = 'inside';
+                this.gpsMessage = 'Location Bypass Active — Check-in enabled from any location.';
+            } else if (this.checkedIn || this.shiftCompleted) {
+                this.gpsStatus = 'inside';
+                this.gpsMessage = 'Location Verified';
+            } else {
+                this.refreshGps();
+            }
             
             // Fail-safe Loader Reset
             setTimeout(() => { if(!this.statsLoaded) this.statsLoaded = true; }, 5000);
@@ -387,7 +461,6 @@ function dashboardUI() {
                     this.checkedIn = true;
                     this.timerPulseClass = 'bg-emerald-500';
                     this.startTimer();
-                    this.startHeartbeat();
                     if (bsRaw && !beRaw) {
                         this.onBreak = true;
                         this.timerPulseClass = 'bg-amber-500';
@@ -428,11 +501,32 @@ function dashboardUI() {
             if (type === 'checkout' && !confirm('Submit shift for review and check out?')) return;
             
             this.loading = true;
+            let payload = {};
+            const hasBypass = {{ 'true' if current_user.location_bypass_until and current_user.location_bypass_until > now else 'false' }};
+            
+            // Demand tracking coordinates manually on check-in, UNLESS they have an admin bypass
+            if (type === 'checkin' && !hasBypass) {
+                try {
+                    const pos = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            enableHighAccuracy: true, timeout: 10000, maximumAge: 0
+                        });
+                    });
+                    payload = {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy
+                    };
+                } catch (e) {
+                    console.warn("GPS Request Failed or Denied:", e);
+                }
+            }
+
             try {
                 const r = await fetch(urlMap[type], {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': bridge.csrf },
-                    body: JSON.stringify({})
+                    body: JSON.stringify(payload)
                 });
                 const d = await r.json();
                 if (d.success) {
@@ -446,6 +540,54 @@ function dashboardUI() {
                 this.loading = false; 
                 window.showToast('Network error. Please try again.', 'error');
             }
+        },
+
+        refreshGps() {
+            if (this.checkedIn || this.shiftCompleted || this.hasBypass) return;
+            this.gpsStatus = 'checking';
+            this.gpsMessage = 'Detecting your location...';
+
+            if (!navigator.geolocation) {
+                this.gpsStatus = 'denied';
+                this.gpsMessage = 'Geolocation not supported by your browser';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    this.gpsLat = position.coords.latitude;
+                    this.gpsLon = position.coords.longitude;
+                    try {
+                        const resp = await fetch('{{ url_for("staff.check_location") }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': bridge.csrf },
+                            body: JSON.stringify({ latitude: this.gpsLat, longitude: this.gpsLon })
+                        });
+                        const data = await resp.json();
+                        this.gpsDistance = data.distance;
+                        if (data.allowed) {
+                            this.gpsStatus = 'inside';
+                            this.gpsMessage = 'You are within the office geofence';
+                        } else {
+                            this.gpsStatus = 'outside';
+                            this.gpsMessage = data.message;
+                        }
+                    } catch(e) {
+                        this.gpsStatus = 'outside';
+                        this.gpsMessage = 'Could not verify location. Check connection.';
+                    }
+                },
+                (error) => {
+                    if (error.code === error.PERMISSION_DENIED) {
+                        this.gpsStatus = 'denied';
+                        this.gpsMessage = 'Location access denied. Enable GPS to check in.';
+                    } else {
+                        this.gpsStatus = 'outside';
+                        this.gpsMessage = 'Could not determine location. Enable GPS.';
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         },
 
         startTimer() {
@@ -487,14 +629,6 @@ function dashboardUI() {
                 }
             });
             cal.render();
-        },
-
-        startHeartbeat() {
-            setInterval(() => {
-                fetch(bridge.heartbeatUrl, { 
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': bridge.csrf }
-                });
-            }, 180000);
         }
     };
 }

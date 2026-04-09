@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>EMS Checkout Reminder</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f8f9fa; padding: 20px; text-align: center; border-radius: 5px; }
+        .content { padding: 20px 0; }
+        .footer { font-size: 12px; color: #666; text-align: center; margin-top: 30px; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>EMS - Checkout Reminder</h2>
+        </div>
+
+        <div class="content">
+            <p>Dear {{ user.profile.full_name if user.profile else user.email }},</p>
+
+            <p>This is a friendly reminder that you are still checked in to the EMS system.</p>
+
+            <p><strong>Check-in Time:</strong> {{ attendance.check_in.strftime('%Y-%m-%d %I:%M %p') }}</p>
+
+            <p>Please remember to check out when you leave the office to ensure accurate attendance records.</p>
+
+            <p>You can check out by:</p>
+            <ul>
+                <li>Using the EMS web interface</li>
+                <li>Scanning your QR code at the office exit</li>
+                <li>Contacting your administrator if you need assistance</li>
+            </ul>
+
+            <p>If you have already left for the day, you will be automatically checked out at 6:00 PM.</p>
+
+            <p>Thank you for your attention to this matter.</p>
+
+            <p>Best regards,<br>
+            EMS System</p>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from the Employee Management System.<br>
+            Please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>

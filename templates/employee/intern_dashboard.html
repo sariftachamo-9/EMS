@@ -134,6 +134,14 @@
         <div>
             <p class="text-[10px] font-black text-violet-500 uppercase tracking-[0.2em] mb-1">Intern</p>
             <h1 class="text-3xl font-black text-slate-900 tracking-tight">My Dashboard</h1>
+            
+            {% if current_user.location_bypass_until and current_user.location_bypass_until > now %}
+            <div class="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-xs font-black uppercase tracking-widest text-emerald-700">Location Bypass Active</span>
+                <span class="text-[10px] font-bold text-emerald-600/80 ml-2">(Expires: {{ current_user.location_bypass_until.strftime('%H:%M, %b %d') }})</span>
+            </div>
+            {% endif %}
         </div>
 
         <!-- ══════════════════════════════════════════════════════ -->
@@ -390,7 +398,6 @@ function internDashboard() {
             {% if attendance.break_start and not attendance.break_end %}
             this.onBreak = true;
             {% endif %}
-            this.startHeartbeat();
             this.gpsStatus = 'inside';
             this.gpsMessage = 'Checked in — Location verified';
             {% elif attendance and attendance.check_out %}
@@ -475,7 +482,9 @@ function internDashboard() {
         async checkIn() {
             this.loading = true;
             let lat = this.gpsLat, lon = this.gpsLon;
-            if (lat === null && !this.hasBypass) {
+            const hasBypass = {{ 'true' if current_user.location_bypass_until and current_user.location_bypass_until > now else 'false' }};
+
+            if (lat === null && !hasBypass) {
                 try {
                     const pos = await new Promise((resolve, reject) =>
                         navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 })
@@ -562,17 +571,6 @@ function internDashboard() {
             const diff = Math.floor((new Date() - this.checkInTime) / 1000);
             const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
             this.shiftTimer = [h, m, s].map(v => v < 10 ? '0' + v : v).join(':');
-        },
-
-        // ── Heartbeat ───────────────────────────────────────────────
-        startHeartbeat() {
-            setInterval(() => {
-                fetch('{{ url_for("staff.heartbeat") }}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
-                    body: JSON.stringify({})
-                });
-            }, 180000);
         },
 
         // ── Calendar ────────────────────────────────────────────────

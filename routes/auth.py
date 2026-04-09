@@ -61,37 +61,8 @@ def qr_login(token):
         token = serializer.dumps(user.id, salt=current_app.config['QR_LOGIN_SALT'])
         return redirect(url_for('auth.qr_password_check', token=token))
     
-    # Automatic Check-In Logic for QR Login
-    from database.models import Attendance, AuditLog
-    from utils.time_utils import get_nepal_time
-    today = get_nepal_time().date()
-    
-    existing_attendance = Attendance.query.filter_by(user_id=user.id).filter(
-        db.func.date(Attendance.check_in) == today
-    ).first()
-    
-    if not existing_attendance:
-        # Create new attendance record
-        now = get_nepal_time()
-        new_att = Attendance(user_id=user.id, check_in=now, heartbeat_last=now)
-        db.session.add(new_att)
-        db.session.add(AuditLog(
-            user_id=user.id, 
-            action="User logged in via QR Code (Attendance Automatically Recorded)", 
-            ip_address=request.remote_addr
-        ))
-        msg = 'Logged in via QR code successfully. Attendance recorded.'
-    else:
-        # Already has attendance
-        db.session.add(AuditLog(
-            user_id=user.id, 
-            action="User logged in via QR Code (Already attending)", 
-            ip_address=request.remote_addr
-        ))
-        msg = 'Logged in via QR code successfully (Daily attendance already exists).'
-
     db.session.commit()
-    flash(msg, 'success')
+    flash('Logged in via QR code successfully.', 'success')
     return redirect(url_for('staff.dashboard'))
 
 @auth_bp.route('/qr-password-check/<token>', methods=['GET', 'POST'])

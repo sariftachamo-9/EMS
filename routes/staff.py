@@ -66,7 +66,8 @@ def dashboard():
                            latest_notice=latest_notice,
                            show_notice_popup=show_notice_popup,
                            today_date=today,
-                           initial_stats=initial_stats)
+                           initial_stats=initial_stats,
+                           now=get_nepal_time())
 
 @staff_bp.route('/api/attendance-stats', methods=['GET'])
 @login_required
@@ -127,13 +128,45 @@ def check_in():
         db.session.commit()
         return jsonify({'success': False, 'message': 'You have already checked in for today.'}), 400
 
-    # GPS Location Verification (REMOVED: Location access feature disabled)
-    # data = request.get_json() or {}
-    # lat = data.get('latitude')
-    # lon = data.get('longitude')
+    # GPS Location Verification
+    data = request.get_json() or {}
+    lat = data.get('latitude')
+    lon = data.get('longitude')
+    
+    # Check Location Bypasses (Admin Grant or Office IP limit)
+    has_bypass = False
+    if current_user.location_bypass_until and current_user.location_bypass_until > get_nepal_time():
+        has_bypass = True
+        
+    settings = OfficeSettings.query.first()
+    office_ip = settings.office_ip if settings and settings.office_ip else current_app.config.get('OFFICE_PUBLIC_IP', '')
+    if office_ip and request.remote_addr == office_ip:
+        has_bypass = True
+
+    if not has_bypass:
+        if lat is None or lon is None:
+            # Audit failure
+            db.session.add(AuditLog(
+                user_id=current_user.id, 
+                action="Check-in Blocked: Location Services Denied", 
+                ip_address=request.remote_addr
+            ))
+            db.session.commit()
+            return jsonify({'success': False, 'message': 'Location access required for Check-In. Please allow GPS access.'}), 403
+            
+        from utils.location_utils import verify_location_access
+        is_allowed, msg, dist = verify_location_access(lat, lon, data.get('accuracy'))
+        if not is_allowed:
+            db.session.add(AuditLog(
+                user_id=current_user.id, 
+                action=f"Check-in Blocked: Outside Geofence (Dist: {int(dist)}m)", 
+                ip_address=request.remote_addr
+            ))
+            db.session.commit()
+            return jsonify({'success': False, 'message': f"Geofence Rejected: {msg}"}), 403
     
     now = get_nepal_time()
-    attendance = Attendance(user_id=current_user.id, check_in=now, heartbeat_last=now)
+    attendance = Attendance(user_id=current_user.id, check_in=now)
     db.session.add(attendance)
     db.session.flush() # Get attendance ID
     
@@ -195,25 +228,54 @@ def check_out():
     
     return jsonify({'success': True, 'message': f'Checked out successfully. Status: {attendance.status}'})
 
-@staff_bp.route('/heartbeat', methods=['POST'])
+@staff_bp.route('/check-location', methods=['POST'])
 @login_required
-def heartbeat():
-    today = get_nepal_time().date()
-    attendance = Attendance.query.filter_by(user_id=current_user.id).filter(
-        db.func.date(Attendance.check_in) == today, 
-        Attendance.check_out.is_(None)
-    ).first()
+def check_location():
+    """
+    Utility endpoint for the frontend dashboard to verify if the user is 
+    inside the geofence or has an active bypass.
+    """
+    from database.models import OfficeSettings
+    data = request.get_json() or {}
+    lat = data.get('latitude')
+    lon = data.get('longitude')
     
-    if not attendance:
-        return jsonify({'success': False, 'message': 'No active session.'}), 404
+    # Check Bypass Status (Admin Grant or Office IP)
+    has_bypass = False
+    if current_user.location_bypass_until and current_user.location_bypass_until > get_nepal_time():
+        has_bypass = True
+        
+    settings = OfficeSettings.query.first()
+    office_ip = settings.office_ip if settings and settings.office_ip else current_app.config.get('OFFICE_PUBLIC_IP', '')
+    if office_ip and request.remote_addr == office_ip:
+        has_bypass = True
+        
+    if has_bypass:
+        return jsonify({
+            'success': True,
+            'allowed': True,
+            'message': 'Location Bypass Active',
+            'distance': 0
+        })
+        
+    if lat is None or lon is None:
+        return jsonify({
+            'success': False,
+            'allowed': False,
+            'message': 'Coordinates missing',
+            'distance': None
+        })
+        
+    from utils.location_utils import verify_location_access
+    allowed, msg, dist = verify_location_access(lat, lon, data.get('accuracy'))
+    
+    return jsonify({
+        'success': True,
+        'allowed': allowed,
+        'message': msg,
+        'distance': int(dist) if dist is not None else None
+    })
 
-    now = get_nepal_time()
-    attendance.heartbeat_last = now
-    attendance.outside_geofence_since = None
-    db.session.commit()
-    
-    return jsonify({'success': True, 'status': 'inside'})
-    
 @staff_bp.route('/start-break', methods=['POST'])
 @login_required
 def start_break():

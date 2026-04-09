@@ -58,6 +58,96 @@
         </form>
     </div>
 
+    <!-- Auto-Checkout Settings -->
+    <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <div class="px-10 pt-8 pb-4">
+            <h4 class="text-xs font-black uppercase text-slate-400 tracking-widest">Automated Attendance Management</h4>
+        </div>
+        <form method="POST" class="px-10 pb-10 space-y-8">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Include existing fields -->
+            <input type="hidden" name="latitude" value="{{ settings.latitude if settings else '27.7172' }}">
+            <input type="hidden" name="longitude" value="{{ settings.longitude if settings else '85.3240' }}">
+            <input type="hidden" name="radius" value="{{ settings.radius if settings else '150' }}">
+            <input type="hidden" name="office_ip" value="{{ settings.office_ip if settings else '' }}">
+            
+            <div class="space-y-6">
+                <!-- Auto Checkout Toggle -->
+                <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-black text-slate-900">Automatic Daily Checkout</h5>
+                            <p class="text-xs text-slate-500 font-medium">Automatically check out all active users at a specified time</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="auto_checkout_enabled" class="sr-only peer" 
+                               {{ 'checked' if settings and hasattr(settings, 'auto_checkout_enabled') and settings.auto_checkout_enabled else '' }}>
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Checkout Time Setting -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-3">
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Auto Checkout Time</label>
+                        <input type="time" name="auto_checkout_time" 
+                               value="{{ settings.auto_checkout_time.strftime('%H:%M') if settings and hasattr(settings, 'auto_checkout_time') and settings.auto_checkout_time else '18:00' }}" 
+                               class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-blue-100 transition shadow-inner">
+                        <p class="text-xs text-slate-400 font-medium">Time when all checked-in users will be automatically checked out</p>
+                    </div>
+                </div>
+
+                <!-- Email Reminders Toggle -->
+                <div class="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-black text-slate-900">Email Checkout Reminders</h5>
+                            <p class="text-xs text-slate-500 font-medium">Send reminder emails to users still checked in before auto-checkout</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="email_reminders_enabled" class="sr-only peer" 
+                               {{ 'checked' if settings and hasattr(settings, 'email_reminders_enabled') and settings.email_reminders_enabled else '' }}>
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                    </label>
+                </div>
+
+                <!-- Reminder Time Setting -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-3">
+                        <label class="block text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Reminder Timing</label>
+                        <select name="reminder_time_before_checkout" 
+                                class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-green-100 transition shadow-inner">
+                            <option value="15" {{ 'selected' if settings and hasattr(settings, 'reminder_time_before_checkout') and settings.reminder_time_before_checkout == 15 else '' }}>15 minutes before</option>
+                            <option value="30" {{ 'selected' if settings and hasattr(settings, 'reminder_time_before_checkout') and settings.reminder_time_before_checkout == 30 else '' }}>30 minutes before</option>
+                            <option value="60" {{ 'selected' if settings and hasattr(settings, 'reminder_time_before_checkout') and settings.reminder_time_before_checkout == 60 else '' }}>1 hour before</option>
+                            <option value="120" {{ 'selected' if settings and hasattr(settings, 'reminder_time_before_checkout') and settings.reminder_time_before_checkout == 120 else '' }}>2 hours before</option>
+                        </select>
+                        <p class="text-xs text-slate-400 font-medium">How long before auto-checkout to send reminder emails</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full bg-slate-900 text-white font-black py-5 rounded-[1.5rem] hover:bg-black transition-all duration-300 shadow-xl shadow-slate-200 uppercase tracking-[0.2em] text-xs">
+                    Apply Attendance Automation Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- Geofence Info -->
     <div class="bg-orange-50/50 p-8 rounded-3xl border border-orange-100 flex items-start space-x-6">
         <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-orange-500 shadow-sm flex-shrink-0">

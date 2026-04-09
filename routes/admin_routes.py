@@ -28,17 +28,31 @@ def admin_required(func):
 @login_required
 @admin_required
 def generate_qr_login(user_id):
-    token = secrets.token_hex(16)
-    expires = get_nepal_time() + timedelta(minutes=5)
+    user = User.query.get_or_404(user_id)
+    if not user.profile:
+        return jsonify({'success': False, 'message': 'User has no profile.'}), 400
+
+    # Use the same serializer as QRService for consistency
+    from itsdangerous import URLSafeSerializer
+    s = URLSafeSerializer(current_app.config['SECRET_KEY'])
+    token_data = {
+        "username": user.profile.full_name,
+        "user_id": user.profile.employee_id,
+        "role": user.role
+    }
+    token = s.dumps(token_data)
     
-    # Invalidate old tokens for this user
-    LoginToken.query.filter_by(user_id=user_id, used=False).update({'used': True})
+    # Point to the auto_login flow which includes Geofence validation
+    qr_url = url_for('qr.auto_login', token=token, _external=True)
     
-    new_token = LoginToken(token=token, user_id=user_id, expires_at=expires)
-    db.session.add(new_token)
+    # Store Audit Log
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Generated Direct Login Link for {user.username}",
+        ip_address=request.remote_addr
+    ))
     db.session.commit()
     
-    qr_url = url_for('auth.qr_login', token=token, _external=True)
     return jsonify({'success': True, 'qr_url': qr_url})
 
 @admin_bp.route('/dashboard')
@@ -609,18 +623,37 @@ def office_settings():
             if rad: settings.radius = int(rad)
             settings.office_ip = request.form.get('office_ip', '')
             
+            # Auto-checkout settings
+            settings.auto_checkout_enabled = request.form.get('auto_checkout_enabled') == 'on'
+            checkout_time_str = request.form.get('auto_checkout_time')
+            if checkout_time_str:
+                from datetime import datetime
+                settings.auto_checkout_time = datetime.strptime(checkout_time_str, '%H:%M').time()
+            
+            # Email reminder settings
+            settings.email_reminders_enabled = request.form.get('email_reminders_enabled') == 'on'
+            reminder_minutes = request.form.get('reminder_time_before_checkout')
+            if reminder_minutes:
+                settings.reminder_time_before_checkout = int(reminder_minutes)
+            
             # Create AuditLog for updating settings
             log = AuditLog(
                 user_id=current_user.id,
-                action="Updated Primary Office Settings",
+                action="Updated Office Settings (Geofence & Auto-Checkout)",
                 ip_address=request.remote_addr
             )
             db.session.add(log)
             
             db.session.commit()
-            flash('Office settings updated.', 'success')
-        except ValueError:
-            flash('Invalid input for latitude, longitude, or radius.', 'danger')
+            
+            # Restart scheduler with new settings
+            from utils.scheduler_service import scheduler
+            if scheduler:
+                scheduler.restart()
+            
+            flash('Office settings updated successfully.', 'success')
+        except ValueError as e:
+            flash(f'Invalid input: {str(e)}', 'danger')
             
         return redirect(url_for('admin.office_settings'))
         

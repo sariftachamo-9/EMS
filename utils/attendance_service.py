@@ -224,29 +224,9 @@ class AttendanceMonitor:
         while True:
             with self.app.app_context():
                 try:
-                    self.process_heartbeats()
+                    pass  # Monitor running (heartbeat removed)
                 except Exception as e:
                     print(f"Monitor error: {e}")
             time.sleep(60) # Run every minute
 
-    def process_heartbeats(self):
-        # Auto-checkout logic for inactivity or geofence violation
-        now = get_nepal_time()
-        active_attendances = Attendance.query.filter(Attendance.check_out == None).all()
-        
-        has_changes = False
-        for att in active_attendances:
-            # 1. Inactivity Timeout (30 mins)
-            if att.heartbeat_last and (now - att.heartbeat_last).total_seconds() > 1800: # 30 mins
-                user = User.query.get(att.user_id)
-                att.check_out = att.heartbeat_last
-                att.status = AttendanceService.calculate_status(att.check_in, att.check_out, role=user.role if user else 'employee')
-                has_changes = True
-                continue
-                
-        if has_changes:
-            try:
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                print(f"Monitor Commit Failed: {e}")
+

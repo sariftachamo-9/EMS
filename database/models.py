@@ -194,6 +194,10 @@ class OfficeSettings(db.Model):
     longitude = db.Column(db.Float, default=85.3240)
     radius = db.Column(db.Integer, default=100)
     office_ip = db.Column(db.String(45))
+    auto_checkout_enabled = db.Column(db.Boolean, default=True)
+    auto_checkout_time = db.Column(db.Time, default=datetime.strptime('18:00', '%H:%M').time())  # 6 PM
+    email_reminders_enabled = db.Column(db.Boolean, default=True)
+    reminder_time_before_checkout = db.Column(db.Integer, default=30)  # minutes before auto-checkout
 
 class AllowedLocation(db.Model):
     __tablename__ = 'allowed_locations'
@@ -222,6 +226,8 @@ class LoginToken(db.Model):
     created_at = db.Column(db.DateTime, default=get_nepal_time)
     expires_at = db.Column(db.DateTime, nullable=False)
     used = db.Column(db.Boolean, default=False)
+    browser_fingerprint = db.Column(db.String(64), nullable=True) # Binding to browser session
+    is_viewed = db.Column(db.Boolean, default=False)             # One-time view protection
 
 class VerificationToken(db.Model):
     __tablename__ = 'verification_tokens'

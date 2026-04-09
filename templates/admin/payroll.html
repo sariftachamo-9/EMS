@@ -68,7 +68,7 @@
                     <tr class="hover:bg-slate-50/50 transition bg-white">
                         <td class="px-6 py-5 text-sm font-bold text-slate-900">{{ p.month_str }}</td>
                         <td class="px-6 py-5 text-sm text-slate-500">{{ p.employees }}</td>
-                        <td class="px-6 py-5 text-sm font-bold text-emerald-500">${{ "{:,.2f}".format(p.total_salary) }}</td>
+                        <td class="px-6 py-5 text-sm font-bold text-emerald-500">Rs. {{ "{:,.2f}".format(p.total_salary) }}</td>
                         <td class="px-6 py-5">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200 shadow-sm">
                                 {{ p.status }}
@@ -124,7 +124,7 @@
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return ' $' + context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2});
+                                return ' Rs. ' + context.parsed.y.toLocaleString(undefined, {minimumFractionDigits: 2});
                             }
                         }
                     }

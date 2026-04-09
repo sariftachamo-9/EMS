@@ -4,6 +4,7 @@ from extensions import db, login_manager, mail, migrate, limiter, csrf
 from flask_wtf.csrf import CSRFError
 from flask_talisman import Talisman
 from config import config
+from utils.scheduler_service import SchedulerService
 import threading
 
 def create_app(config_name='default'):
@@ -22,6 +23,13 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     limiter.init_app(app)
     csrf.init_app(app)
+
+    # Initialize Scheduler
+    scheduler = SchedulerService()
+    scheduler.init_app(app)
+    
+    # Store scheduler in app for later access
+    app.scheduler = scheduler
 
     # Initialize Talisman (Security Headers & CSP)
     csp = {
@@ -138,6 +146,7 @@ def create_app(config_name='default'):
         # Format as "+05:45" for JavaScript ISO strings
         tz_offset = offset[:3] + ':' + offset[3:]
         return {
+            'hasattr': hasattr,
             'tz_offset': tz_offset,
             'BOOT_ID': app.config.get('BOOT_ID'),
             'REQUIRE_LOCATION_VERIFICATION': app.config.get('REQUIRE_LOCATION_VERIFICATION', False)

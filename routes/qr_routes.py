@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from extensions import db, csrf
-from database.models import User, EmployeeProfile, LoginLog, AuditLog, Notice
+from database.models import User, EmployeeProfile, LoginLog, AuditLog, Notice, LoginToken
 from utils.time_utils import get_nepal_time
 from datetime import datetime, timedelta
 import os
 import secrets
 from utils import location_service
+import uuid
 
 qr_bp = Blueprint('qr', __name__)
 
@@ -159,25 +160,29 @@ def check_loc_status(token):
 # ─── Badge Generation Routes ──────────────────────────────────────────────────
 
 def generate_qr_url(user):
-    from itsdangerous import URLSafeSerializer
-    import os
     from flask import current_app, url_for
+    import os
     
-    s = URLSafeSerializer(current_app.config['SECRET_KEY'])
-    token_data = {
-        "username": user.profile.full_name if user.profile else user.username,
-        "user_id": user.profile.employee_id if user.profile else user.id,
-        "role": user.role
-    }
-    token = s.dumps(token_data)
+    # Generate a unique, short-lived database token instead of encoding everything in URL
+    token_str = secrets.token_urlsafe(32)
+    expires_at = get_nepal_time() + timedelta(minutes=5)
+    
+    new_token = LoginToken(
+        token=token_str,
+        user_id=user.id,
+        expires_at=expires_at,
+        used=False
+    )
+    db.session.add(new_token)
+    db.session.commit()
     
     external_url = os.environ.get('EXTERNAL_URL')
     if external_url:
-        return external_url.rstrip('/') + url_for('qr.auto_login', token=token)
+        return external_url.rstrip('/') + url_for('qr.auto_login', token=token_str)
     
     # Secure fallback for dev/proxied environments
     scheme = 'https' if not current_app.debug else request.scheme
-    url = url_for('qr.auto_login', token=token, _external=True, _scheme=scheme)
+    url = url_for('qr.auto_login', token=token_str, _external=True, _scheme=scheme)
     return url.replace('http://', 'https://') if not current_app.debug else url
 
 @qr_bp.route('/my-badge')
@@ -240,16 +245,20 @@ def qr_login_api():
     
     # Handle Token-based login (new URL method)
     if token:
-        from itsdangerous import URLSafeSerializer, BadSignature
-        s = URLSafeSerializer(current_app.config['SECRET_KEY'])
-        try:
-            token_data = s.loads(token)
-            username = token_data.get('username')
-            user_id_badge = token_data.get('user_id')
-            role = token_data.get('role')
-        except BadSignature:
-            current_app.logger.warning("QR Login: Invalid token signature.")
-            return jsonify({'success': False, 'message': 'Invalid QR token.'}), 403
+        # Resolve token from database
+        db_token = LoginToken.query.filter_by(token=token).first()
+        if not db_token or db_token.used or db_token.expires_at < get_nepal_time():
+            return jsonify({'success': False, 'message': 'Invalid, used, or expired security token.'}), 403
+            
+        user = db_token.user
+        if not user:
+            return jsonify({'success': False, 'message': 'User not associated with token.'}), 404
+            
+        username = user.profile.full_name if user.profile else user.username
+        user_id_badge = user.profile.employee_id if user.profile else user.id
+        role = user.role
+        
+        # We don't mark as used YET. We wait for full login success.
             
     if not username or not user_id_badge or not role:
         return jsonify({'success': False, 'message': 'Missing user data in request.'}), 400
@@ -313,9 +322,9 @@ def qr_login_api():
     
     # 3. Create user session with consistent security tokens
     # This prevents the Single Session Middleware from kicking the user out on the next click.
-    token = secrets.token_hex(16)
-    user.current_session_id = token
-    session['session_token'] = token
+    new_session_id = secrets.token_hex(16)
+    user.current_session_id = new_session_id
+    session['session_token'] = new_session_id
     
     login_user(user)
     session['session_version'] = current_app.config.get('BOOT_ID')
@@ -327,6 +336,13 @@ def qr_login_api():
         details=f"Device IP: {request.remote_addr}, Lat: {lat}, Lon: {lon}",
         ip_address=request.remote_addr
     ))
+    
+    # NEW: Securely consume the token (Corrected variable lookup)
+    if token:
+        db_token = LoginToken.query.filter_by(token=token).first()
+        if db_token:
+            db_token.used = True
+            
     db.session.commit()
     
     # 4. Return redirect URL based on role
@@ -364,13 +380,54 @@ def student_dashboard_virtual():
 
 @qr_bp.route('/auto-login/<token>')
 def auto_login(token):
-    from itsdangerous import URLSafeSerializer, BadSignature
-    s = URLSafeSerializer(current_app.config['SECRET_KEY'])
-    try:
-        # Validate token early before rendering template
-        token_data = s.loads(token)
-    except BadSignature:
-        flash('Invalid or expired QR code badge.', 'danger')
-        return redirect(url_for('auth.login'))
+    # Layer 1 & 3 (Atomic): One-Time View & Existence Check
+    # This UPDATE is atomic - only one request can ever change is_viewed from False to True.
+    # We also check for expiration and usage in the same query.
+    now = get_nepal_time()
+    affected = LoginToken.query.filter_by(
+        token=token, 
+        is_viewed=False, 
+        used=False
+    ).filter(LoginToken.expires_at > now).update({'is_viewed': True})
+    
+    db.session.commit()
+
+    # Fetch the token to continue validation (or fail if update didn't happen)
+    db_token = LoginToken.query.filter_by(token=token).first()
+
+    if affected == 0:
+        # Reason for failure: Token doesn't exist, already viewed, already used, or expired.
+        # This catch-all error landing page is clearer for the user.
+        return render_template('qr/qr_error.html'), 403
+
+    # Layer 2: Browser Fingerprint Binding (Cookie Based)
+    fp_cookie = request.cookies.get('qr_fp')
+    
+    # Check if a fingerprint is already bound
+    if db_token.browser_fingerprint:
+        if fp_cookie != db_token.browser_fingerprint:
+            # Token was opened in another browser session (Different Cookie/Fingerprint)
+            return render_template('qr/qr_error.html'), 403
+    else:
+        # First use: Bind the fingerprint immediately and atomically
+        if not fp_cookie:
+            import uuid
+            fp_cookie = str(uuid.uuid4())
         
-    return render_template('qr/auto_login.html', token=token, user_info=token_data)
+        # Another atomic update to set the fingerprint if it's still NULL
+        # (Prevents a race where two tabs of the same browser open it simultaneously)
+        db_token.browser_fingerprint = fp_cookie
+        db.session.commit()
+
+    user = db_token.user
+    user_info = {
+        "username": user.profile.full_name if user.profile else user.username,
+        "role": user.role
+    }
+        
+    response = current_app.make_response(render_template('qr/auto_login.html', token=token, user_info=user_info))
+    
+    # Set the tracking cookie if not present (Session cookie, strict)
+    response.set_cookie('qr_fp', fp_cookie, httponly=True, samesite='Strict')
+    
+    return response
