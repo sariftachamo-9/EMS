@@ -133,9 +133,11 @@ def check_in():
     lat = data.get('latitude')
     lon = data.get('longitude')
     
-    # Check Location Bypasses (Admin Grant or Office IP limit)
+    # Check Location Bypasses (Admin Grant or Office IP limit or Overtime)
     has_bypass = False
-    if current_user.location_bypass_until and current_user.location_bypass_until > get_nepal_time():
+    if current_user.location_bypass_until is not None and current_user.location_bypass_until > get_nepal_time():
+        has_bypass = True
+    elif current_user.overtime_bypass_until and current_user.overtime_bypass_until > get_nepal_time():
         has_bypass = True
         
     settings = OfficeSettings.query.first()
@@ -240,9 +242,11 @@ def check_location():
     lat = data.get('latitude')
     lon = data.get('longitude')
     
-    # Check Bypass Status (Admin Grant or Office IP)
+    # Check Bypass Status (Admin Grant or Office IP or Overtime)
     has_bypass = False
-    if current_user.location_bypass_until and current_user.location_bypass_until > get_nepal_time():
+    if current_user.location_bypass_until is not None and current_user.location_bypass_until > get_nepal_time():
+        has_bypass = True
+    elif current_user.overtime_bypass_until and current_user.overtime_bypass_until > get_nepal_time():
         has_bypass = True
         
     settings = OfficeSettings.query.first()
@@ -402,6 +406,49 @@ def my_leaves():
         
     leaves = LeaveRequest.query.filter_by(user_id=current_user.id).order_by(LeaveRequest.applied_on.desc()).all()
     return render_template('employee/my_leaves.html', leaves=leaves, leave_balance=leave_balance)
+
+# ─── Overtime Requests ─────────────────────────────────────────────────────────
+@staff_bp.route('/overtime', methods=['GET', 'POST'])
+@login_required
+def my_overtime():
+    from database.models import OvertimeRequest
+    from datetime import date
+    
+    if request.method == 'POST':
+        overtime_type = request.form.get('overtime_type')  # 'remote' or 'onsite'
+        hours = float(request.form.get('hours', 0))
+        requested_date_str = request.form.get('requested_date')
+        reason = request.form.get('reason')
+        
+        if overtime_type not in ['remote', 'onsite']:
+            flash('Invalid overtime type.', 'error')
+            return redirect(url_for('staff.my_overtime'))
+        
+        if hours <= 0 or hours > 12:
+            flash('Overtime hours must be between 0 and 12.', 'error')
+            return redirect(url_for('staff.my_overtime'))
+        
+        requested_date = date.fromisoformat(requested_date_str)
+        
+        if requested_date < get_nepal_time().date():
+            flash('Cannot apply for overtime on a past date.', 'error')
+            return redirect(url_for('staff.my_overtime'))
+        
+        ot_request = OvertimeRequest(
+            user_id=current_user.id,
+            overtime_type=overtime_type,
+            hours=hours,
+            requested_date=requested_date,
+            reason=reason,
+            status='pending'
+        )
+        db.session.add(ot_request)
+        db.session.commit()
+        flash('Overtime request submitted successfully.', 'success')
+        return redirect(url_for('staff.my_overtime'))
+    
+    overtime_requests = OvertimeRequest.query.filter_by(user_id=current_user.id).order_by(OvertimeRequest.applied_on.desc()).all()
+    return render_template('employee/my_overtime.html', overtime_requests=overtime_requests)
 
 # ─── Calendar Events API ──────────────────────────────────────────────────────
 @staff_bp.route('/attendance/events')

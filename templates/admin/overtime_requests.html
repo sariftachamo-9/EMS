@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block admin_title %}Overtime Management{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Overtime Filters -->
+    <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 p-6 mb-8">
+        <form method="GET" class="flex flex-col md:flex-row items-end gap-6">
+            <div class="w-full md:w-48 space-y-2">
+                <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Status</label>
+                <select name="status" class="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 transition">
+                    <option value="">All Status</option>
+                    <option value="pending" {{ 'selected' if status_filter == 'pending' }}>Pending</option>
+                    <option value="approved" {{ 'selected' if status_filter == 'approved' }}>Approved</option>
+                    <option value="rejected" {{ 'selected' if status_filter == 'rejected' }}>Rejected</option>
+                </select>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button type="submit" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition shadow-lg text-sm uppercase tracking-widest">
+                    Filter
+                </button>
+                <a href="{{ url_for('admin.overtime_requests') }}" class="bg-slate-100 text-slate-500 px-4 py-3 rounded-xl font-bold hover:bg-slate-200 transition text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Card -->
+    <div class="bg-white rounded-[1.5rem] shadow-sm border border-slate-100/60 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50/30 border-b border-slate-50">
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Employee</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hours</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                        <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for req in overtime_requests %}
+                    <tr class="group hover:bg-slate-50/40 transition-colors duration-200">
+                        <td class="px-8 py-5">
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-black text-xs">
+                                    {{ (req.user.profile.full_name or 'User')[0]|upper }}
+                                </div>
+                                <div>
+                                    <p class="text-[13px] font-bold text-slate-800">{{ req.user.profile.full_name or 'Employee' }}</p>
+                                    <p class="text-[11px] text-slate-400 font-medium">{{ req.user.email }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider 
+                                {% if req.overtime_type == 'remote' %}bg-indigo-50 text-indigo-600
+                                {% else %}bg-amber-50 text-amber-600{% endif %}">
+                                {{ req.overtime_type|upper }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5">
+                            <div class="text-[12px] font-bold text-slate-700">{{ req.hours }} Hours</div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <div class="text-[12px] font-bold text-slate-700">{{ req.requested_date.strftime('%b %d, %Y') }}</div>
+                            <div class="text-[10px] text-slate-400 font-medium">Applied: {{ req.applied_on.strftime('%Y-%m-%d') }}</div>
+                        </td>
+                        <td class="px-8 py-5">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase 
+                                {% if req.status == 'approved' %}bg-emerald-50 text-emerald-600
+                                {% elif req.status == 'pending' %}bg-amber-50 text-amber-600
+                                {% else %}bg-rose-50 text-rose-600{% endif %}">
+                                {{ req.status }}
+                            </span>
+                        </td>
+                        <td class="px-8 py-5">
+                            {% if req.status == 'pending' %}
+                            <div class="flex items-center space-x-4">
+                                <form action="{{ url_for('admin.approve_overtime', request_id=req.id) }}" method="POST" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-emerald-500 hover:text-emerald-600 font-bold text-[11px] uppercase tracking-wider underline">Approve</button>
+                                </form>
+                                <form action="{{ url_for('admin.reject_overtime', request_id=req.id) }}" method="POST" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="text-rose-400 hover:text-rose-500 font-medium text-[11px] uppercase tracking-wider">Reject</button>
+                                </form>
+                            </div>
+                            {% else %}
+                            <span class="text-[11px] text-slate-300 font-bold uppercase tracking-widest italic">Archived</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-8 py-12 text-center text-slate-400 font-medium">No overtime requests found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

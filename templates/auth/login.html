@@ -145,9 +145,23 @@
                     <label style="display:block;font-size:0.78rem;font-weight:600;color:#374151;margin-bottom:0.5rem;">
                         User Email
                     </label>
-                    <input type="text" name="email" id="email_input" required
-                        class="portal-input" placeholder="admin@ems.com or ID"
-                        title="Enter your official Email or Employee/Student ID">
+                    <div style="position:relative;display:flex;gap:0.5rem;">
+                        <input type="text" name="email" id="email_input" required
+                            class="portal-input" placeholder="admin@ems.com or ID"
+                            title="Enter your official Email or Employee/Student ID"
+                            style="flex:1;">
+                        <button type="button" id="checkBypassBtn"
+                            style="padding:0 1rem;background:#f3f4f6;border:1.5px solid #e5e7eb;border-radius:10px;color:#6b7280;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:all 0.2s;letter-spacing:0.02em;"
+                            title="Check if user has location bypass">
+                            <svg id="bypassBtnIcon" style="width:14px;height:14px;margin-right:4px;vertical-align:middle;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                            <span id="bypassBtnText">Check</span>
+                        </button>
+                    </div>
+                    <!-- Bypass Status Message -->
+                    <div id="bypassStatusMsg" style="display:none;margin-top:0.5rem;padding:0.5rem 0.75rem;border-radius:8px;font-size:0.75rem;font-weight:700;letter-spacing:0.03em;">
+                    </div>
                 </div>
 
                 <!-- Password -->
@@ -738,6 +752,126 @@
         }
     }
 
+    // Check user bypass button function
+    async function checkUserBypass() {
+        const emailInput = document.getElementById('email_input');
+        const roleInput = document.getElementById('selected_role');
+        const checkBtn = document.getElementById('checkBypassBtn');
+        const bypassBtnText = document.getElementById('bypassBtnText');
+        const bypassStatusMsg = document.getElementById('bypassStatusMsg');
+
+        const email = emailInput && emailInput.value ? emailInput.value.trim() : '';
+        const role = roleInput ? roleInput.value : '';
+        let hasBypass = false;
+
+        if (!email) {
+            if (bypassStatusMsg) {
+                bypassStatusMsg.style.display = 'block';
+                bypassStatusMsg.style.background = '#fff7ed';
+                bypassStatusMsg.style.color = '#c2410c';
+                bypassStatusMsg.style.border = '1px solid #fcd9a1';
+                bypassStatusMsg.textContent = 'Please enter a username or ID first.';
+            }
+            return;
+        }
+
+        if (checkBtn) {
+            checkBtn.disabled = true;
+            checkBtn.style.background = '#f3f4f6';
+            checkBtn.style.color = '#9ca3af';
+        }
+        if (bypassBtnText) bypassBtnText.textContent = 'Checking...';
+
+        try {
+            const response = await fetch('/qr/api/check-bypass-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email,
+                    role: role
+                })
+            });
+
+            const data = await response.json();
+            hasBypass = !!data.has_bypass;
+
+            if (bypassStatusMsg) {
+                bypassStatusMsg.style.display = 'block';
+
+                if (hasBypass) {
+                    bypassStatusMsg.style.background = '#ecfdf5';
+                    bypassStatusMsg.style.color = '#059669';
+                    bypassStatusMsg.style.border = '1px solid #a7f3d0';
+
+                    if (data.reason === 'admin') {
+                        bypassStatusMsg.textContent = '✓ Admin user - Location bypass active';
+                    } else if (data.reason === 'office_ip') {
+                        bypassStatusMsg.textContent = '✓ Office network - Location bypass active';
+                    } else if (data.reason === 'temporary') {
+                        bypassStatusMsg.textContent = '✓ Admin granted bypass - Location verification not required';
+                    } else if (data.reason === 'overtime') {
+                        bypassStatusMsg.textContent = '✓ Overtime bypass - Location verification not required';
+                    } else {
+                        bypassStatusMsg.textContent = '✓ Location bypass active - Login without verification';
+                    }
+
+                    if (checkBtn) {
+                        checkBtn.style.background = '#ecfdf5';
+                        checkBtn.style.border = '1px solid #a7f3d0';
+                        checkBtn.style.color = '#059669';
+                    }
+                    if (bypassBtnText) bypassBtnText.textContent = 'Active';
+
+                    const locVerified = document.getElementById('location_verified');
+                    if (locVerified) locVerified.value = 'true';
+
+                    const bypassBanner = document.getElementById('admin-bypass-banner');
+                    const locBanner = document.getElementById('location-banner');
+                    const signinReqText = document.getElementById('signin-required-text');
+                    const signInBtn = document.getElementById('signInBtn');
+
+                    if (bypassBanner) bypassBanner.style.display = 'flex';
+                    if (locBanner) locBanner.style.display = 'none';
+                    if (signinReqText) signinReqText.style.display = 'none';
+                    if (signInBtn) {
+                        signInBtn.disabled = false;
+                        signInBtn.style.background = '#ea580c';
+                        signInBtn.style.color = '#fff';
+                        signInBtn.style.cursor = 'pointer';
+                        signInBtn.textContent = 'Sign In';
+                    }
+                } else {
+                    bypassStatusMsg.style.background = '#fff1f2';
+                    bypassStatusMsg.style.color = '#be123c';
+                    bypassStatusMsg.style.border = '1px solid #fecdd3';
+                    bypassStatusMsg.textContent = '✗ No bypass - Location verification required to login';
+
+                    if (checkBtn) {
+                        checkBtn.style.background = '#fff1f2';
+                        checkBtn.style.border = '1px solid #fecdd3';
+                        checkBtn.style.color = '#be123c';
+                    }
+                    if (bypassBtnText) bypassBtnText.textContent = 'Required';
+                }
+            }
+        } catch (err) {
+            console.error('Bypass check error:', err);
+            if (bypassStatusMsg) {
+                bypassStatusMsg.style.display = 'block';
+                bypassStatusMsg.style.background = '#fff7ed';
+                bypassStatusMsg.style.color = '#c2410c';
+                bypassStatusMsg.style.border = '1px solid #fcd9a1';
+                bypassStatusMsg.textContent = 'Error checking bypass. Please try again.';
+            }
+            if (bypassBtnText) bypassBtnText.textContent = 'Check';
+        } finally {
+            if (checkBtn) {
+                checkBtn.disabled = false;
+            }
+            if (bypassBtnText && !hasBypass) bypassBtnText.textContent = 'Check';
+        }
+    }
+
     function togglePasswordVisibility() {
         const input = document.getElementById('password_input');
         const eyeIcon = document.getElementById('eyeIcon');
@@ -805,7 +939,8 @@
         if (!pill) return;
 
         // If location is already verified by server, do not allow local browser checks to downgrade the status
-        const isVerified = document.getElementById('location_verified')?.value === 'true';
+        const locationVerifiedEl = document.getElementById('location_verified');
+        const isVerified = locationVerifiedEl ? locationVerifiedEl.value === 'true' : false;
         if (isVerified) return;
 
         if (state === 'active') {
@@ -864,6 +999,10 @@
         // Password Toggle
         const togglePassBtn = document.getElementById('togglePasswordBtn');
         if (togglePassBtn) togglePassBtn.addEventListener('click', togglePasswordVisibility);
+
+        // Bypass Check Button
+        const checkBypassBtn = document.getElementById('checkBypassBtn');
+        if (checkBypassBtn) checkBypassBtn.addEventListener('click', checkUserBypass);
 
         // Real-time Inputs
         const emailField = document.getElementById('email_input');

@@ -34,6 +34,7 @@ class User(db.Model, UserMixin):
     otp_expiry = db.Column(db.DateTime, nullable=True)
     current_session_id = db.Column(db.String(100), nullable=True)
     location_bypass_until = db.Column(db.DateTime, nullable=True) # For 24h admin bypass
+    overtime_bypass_until = db.Column(db.DateTime, nullable=True) # For overtime-based bypass
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=get_nepal_time)
 
@@ -240,3 +241,19 @@ class VerificationToken(db.Model):
     lng = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=get_nepal_time)
     expires_at = db.Column(db.DateTime, nullable=False)
+
+class OvertimeRequest(db.Model):
+    __tablename__ = 'overtime_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    overtime_type = db.Column(db.String(20), nullable=False) # 'remote' or 'onsite'
+    hours = db.Column(db.Float, nullable=False)
+    requested_date = db.Column(db.Date, nullable=False)
+    reason = db.Column(db.Text)
+    status = db.Column(db.String(20), default='pending') # pending, approved, rejected
+    applied_on = db.Column(db.DateTime, default=get_nepal_time)
+    approved_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    approved_at = db.Column(db.DateTime, nullable=True)
+    
+    user = db.relationship('User', foreign_keys=[user_id], backref='overtime_requests')
+    approver = db.relationship('User', foreign_keys=[approved_by])

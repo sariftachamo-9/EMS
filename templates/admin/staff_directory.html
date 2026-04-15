@@ -3,7 +3,62 @@
 {% block admin_title %}{{ admin_title or 'Staff Management' }}{% endblock %}
 
 {% block content %}
-<div class="space-y-8" x-data="employeeManagement()">
+<div class="space-y-8" id="employee-management-root">
+    <!-- Location Bypass Modal -->
+    <div id="bypass-modal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div id="bypass-modal-backdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-100">
+                <div class="bg-white px-6 pt-6 pb-6 sm:p-8 sm:pb-8">
+                    <div class="sm:flex sm:items-start justify-between mb-6">
+                        <div class="mt-3 text-center sm:mt-0 sm:text-left">
+                            <h3 class="text-xl leading-6 font-black text-slate-800 flex items-center" id="modal-title">
+                                <span class="w-3 h-6 bg-amber-500 rounded-full mr-3 flex-shrink-0"></span>
+                                Manage Location Bypass
+                            </h3>
+                            <p class="text-sm text-slate-500 mt-2">
+                                Update access for <span id="bypass-user-name" class="font-bold text-slate-800"></span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div id="bypass-current-status" class="mb-4 hidden rounded-2xl border px-4 py-3 text-sm font-semibold"></div>
+
+                    <div class="space-y-3">
+                        <button type="button" data-bypass-hours="5" class="bypass-option-btn w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition border border-slate-200">
+                            <span class="font-bold text-slate-700">5 Hours</span>
+                            <span class="text-xs text-slate-400">Short (5hr)</span>
+                        </button>
+                        <button type="button" data-bypass-hours="24" class="bypass-option-btn w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition border border-slate-200">
+                            <span class="font-bold text-slate-700">24 Hours</span>
+                            <span class="text-xs text-slate-400">1 Day</span>
+                        </button>
+                        <button type="button" data-bypass-hours="96" class="bypass-option-btn w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition border border-slate-200">
+                            <span class="font-bold text-slate-700">4 Days</span>
+                            <span class="text-xs text-slate-400">96 Hours</span>
+                        </button>
+                        <button type="button" data-bypass-hours="168" class="bypass-option-btn w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition border border-slate-200">
+                            <span class="font-bold text-slate-700">1 Week</span>
+                            <span class="text-xs text-slate-400">168 Hours</span>
+                        </button>
+                        <button type="button" data-bypass-hours="-1" class="bypass-option-btn w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition border border-slate-200">
+                            <span class="font-bold text-slate-700">Until Turned Off</span>
+                            <span class="text-xs text-slate-400">No Expiration</span>
+                        </button>
+                    </div>
+                    
+                    <div class="mt-6 flex items-center justify-between gap-3">
+                        <button type="button" id="revoke-bypass-btn" class="hidden px-4 py-2 text-sm font-black text-rose-600 bg-rose-50 border border-rose-200 rounded-xl hover:bg-rose-100 transition">
+                            Revoke Bypass
+                        </button>
+                        <button type="button" id="bypass-modal-cancel" class="ml-auto px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h3 class="text-xl font-black text-slate-800 tracking-tight">{{ admin_title or 'Staff Management' }}</h3>
@@ -149,9 +204,14 @@
                                 {% endif %}
 
                                 <!-- Location Bypass -->
-                                <button onclick="grantLocationBypass('{{ user.id }}', '{{ user.profile.full_name }}', this)"
-                                        title="{% if user.location_bypass_until and user.location_bypass_until > now %}Bypass Active (Expires {{ user.location_bypass_until.strftime('%H:%M %d %b') }}){% else %}Grant 24h Location Bypass{% endif %}"
-                                        class="inline-flex items-center justify-center w-7 h-7 border rounded-xl transition
+                                <button type="button"
+                                        data-bypass-user-id="{{ user.id }}"
+                                        data-bypass-user-name="{{ user.profile.full_name or user.email }}"
+                                        data-bypass-active="{{ 'true' if user.location_bypass_until and user.location_bypass_until > now else 'false' }}"
+                                        data-bypass-unlimited="{{ 'true' if user.location_bypass_until and user.location_bypass_until.year >= 2099 else 'false' }}"
+                                        data-bypass-expires="{% if user.location_bypass_until and user.location_bypass_until > now and user.location_bypass_until.year < 2099 %}{{ user.location_bypass_until.strftime('%H:%M %d %b %Y') }}{% endif %}"
+                                        title="{% if user.location_bypass_until and user.location_bypass_until > now and user.location_bypass_until.year >= 2099 %}Bypass Active (Unlimited){% elif user.location_bypass_until and user.location_bypass_until > now %}Bypass Active (Expires {{ user.location_bypass_until.strftime('%H:%M %d %b') }}){% else %}Grant Location Bypass{% endif %}"
+                                        class="open-bypass-modal-btn inline-flex items-center justify-center w-7 h-7 border rounded-xl transition
                                         {% if user.location_bypass_until and user.location_bypass_until > now %}bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100{% else %}bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100{% endif %}">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                 </button>
@@ -210,61 +270,189 @@
     </div>
 
 <script nonce="{{ csp_nonce() }}">
-// Logic for staff directory management
-document.addEventListener('alpine:init', () => {
-    // Only register if not already present to avoid Alpine 3 conflict warnings
-    if (!Alpine.data('employeeManagement')) {
-        Alpine.data('employeeManagement', () => ({
-            // Search and filter state can go here
-        }));
-    }
-});
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('bypass-modal');
+    const modalBackdrop = document.getElementById('bypass-modal-backdrop');
+    const cancelBtn = document.getElementById('bypass-modal-cancel');
+    const userNameEl = document.getElementById('bypass-user-name');
+    const currentStatusEl = document.getElementById('bypass-current-status');
+    const revokeBtn = document.getElementById('revoke-bypass-btn');
+    const triggerButtons = document.querySelectorAll('.open-bypass-modal-btn');
+    const optionButtons = document.querySelectorAll('.bypass-option-btn');
 
-/**
- * Admin function to grant a temporary location bypass
- */
-async function grantLocationBypass(userId, userName, btn) {
-    if (!confirm(`Grant 24-hour location bypass to ${userName}?`)) return;
-    
-    // Immediate UI feedback loop
-    const originalContent = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+    let selectedUserId = null;
+    let selectedUserName = '';
+    let currentTriggerBtn = null;
+    let selectedBypassActive = false;
 
-    try {
-        const response = await fetch(`/qr/api/grant-bypass/${userId}`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token() }}'
+    const closeModal = () => {
+        modal.classList.add('hidden');
+    };
+
+    const updateTriggerButtonState = (targetBtn, { active, unlimited = false, expires = '' }) => {
+        targetBtn.dataset.bypassActive = active ? 'true' : 'false';
+        targetBtn.dataset.bypassUnlimited = unlimited ? 'true' : 'false';
+        targetBtn.dataset.bypassExpires = expires || '';
+
+        if (active) {
+            targetBtn.className = 'open-bypass-modal-btn inline-flex items-center justify-center w-7 h-7 border rounded-xl transition bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
+            targetBtn.title = unlimited ? 'Bypass Active (Unlimited)' : `Bypass Active (Expires ${expires || 'soon'})`;
+        } else {
+            targetBtn.className = 'open-bypass-modal-btn inline-flex items-center justify-center w-7 h-7 border rounded-xl transition bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100';
+            targetBtn.title = 'Grant Location Bypass';
+        }
+
+        targetBtn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`;
+        targetBtn.disabled = false;
+    };
+
+    const openModal = (userId, userName, btn) => {
+        selectedUserId = userId;
+        selectedUserName = userName || 'this user';
+        currentTriggerBtn = btn;
+        selectedBypassActive = btn.dataset.bypassActive === 'true';
+
+        userNameEl.textContent = selectedUserName;
+
+        if (selectedBypassActive) {
+            const isUnlimited = btn.dataset.bypassUnlimited === 'true';
+            const expires = btn.dataset.bypassExpires;
+
+            currentStatusEl.classList.remove('hidden');
+            currentStatusEl.className = 'mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold bg-emerald-50 text-emerald-700 border-emerald-200';
+            currentStatusEl.textContent = isUnlimited
+                ? 'Bypass is currently active without expiration.'
+                : `Bypass is currently active until ${expires}. Choose a new duration to extend it, or revoke it below.`;
+
+            revokeBtn.classList.remove('hidden');
+        } else {
+            currentStatusEl.classList.remove('hidden');
+            currentStatusEl.className = 'mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold bg-amber-50 text-amber-700 border-amber-200';
+            currentStatusEl.textContent = 'No active bypass. Choose a duration below to grant access.';
+            revokeBtn.classList.add('hidden');
+        }
+
+        modal.classList.remove('hidden');
+    };
+
+    triggerButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            openModal(btn.dataset.bypassUserId, btn.dataset.bypassUserName, btn);
+        });
+    });
+
+    modalBackdrop.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+
+    optionButtons.forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            if (!selectedUserId || !currentTriggerBtn) return;
+
+            const hours = Number(btn.dataset.bypassHours);
+            const targetBtn = currentTriggerBtn;
+            const originalContent = targetBtn.innerHTML;
+
+            closeModal();
+            targetBtn.disabled = true;
+            targetBtn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+            try {
+                const response = await fetch('/admin/grant-location-bypass', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        user_id: selectedUserId,
+                        hours: hours
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Operation failed on server.');
+                }
+
+                if (window.showToast) {
+                    window.showToast(data.message, 'success');
+                }
+
+                let expiresText = '';
+                if (hours !== -1) {
+                    const expiryDate = new Date(Date.now() + (hours * 60 * 60 * 1000));
+                    expiresText = expiryDate.toLocaleString();
+                }
+
+                updateTriggerButtonState(targetBtn, {
+                    active: true,
+                    unlimited: hours === -1,
+                    expires: expiresText
+                });
+            } catch (err) {
+                console.error('Bypass Error:', err);
+                targetBtn.innerHTML = originalContent;
+                targetBtn.disabled = false;
+
+                if (window.showToast) {
+                    window.showToast(err.message || 'Could not connect to server.', 'error');
+                } else {
+                    alert('Error: ' + (err.message || 'Failed to grant bypass.'));
+                }
             }
         });
+    });
 
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
+    revokeBtn.addEventListener('click', async () => {
+        if (!selectedUserId || !currentTriggerBtn) return;
+
+        const targetBtn = currentTriggerBtn;
+        const originalContent = targetBtn.innerHTML;
+
+        closeModal();
+        targetBtn.disabled = true;
+        targetBtn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+        try {
+            const response = await fetch('/admin/revoke-location-bypass', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    user_id: selectedUserId
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Operation failed on server.');
+            }
+
+            updateTriggerButtonState(targetBtn, {
+                active: false,
+                unlimited: false,
+                expires: ''
+            });
+
             if (window.showToast) {
                 window.showToast(data.message, 'success');
             }
-            // Transform button to "Active" state
-            btn.className = 'inline-flex items-center justify-center w-7 h-7 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition shadow-sm';
-            btn.title = 'Bypass Active (Expires in 24h)';
-            btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
-        } else {
-            throw new Error(data.message || 'Operation failed on server.');
+        } catch (err) {
+            console.error('Bypass Revoke Error:', err);
+            targetBtn.innerHTML = originalContent;
+            targetBtn.disabled = false;
+
+            if (window.showToast) {
+                window.showToast(err.message || 'Could not connect to server.', 'error');
+            } else {
+                alert('Error: ' + (err.message || 'Failed to revoke bypass.'));
+            }
         }
-    } catch (err) {
-        console.error('Bypass Error:', err);
-        if (window.showToast) {
-            window.showToast(err.message || 'Could not connect to server.', 'error');
-        } else {
-            alert('Error: ' + (err.message || 'Failed to grant bypass.'));
-        }
-        // Revert button on error
-        btn.innerHTML = originalContent;
-        btn.disabled = false;
-    }
-}
+    });
+});
 </script>
 {% endblock %}
-

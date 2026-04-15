@@ -4,7 +4,7 @@ from extensions import db
 from utils.time_utils import get_nepal_time
 import secrets
 from datetime import datetime, timedelta
-from database.models import User, EmployeeProfile, Attendance, LeaveRequest, Payroll, LoginToken, ContactQuery, AuditLog, OfficeSettings, AllowedLocation, Notice
+from database.models import User, EmployeeProfile, Attendance, LeaveRequest, Payroll, LoginToken, ContactQuery, AuditLog, OfficeSettings, AllowedLocation, Notice, OvertimeRequest
 from utils.id_generator import generate_staff_id
 from utils.email_service import send_notice_broadcast
 from werkzeug.security import generate_password_hash
@@ -1269,4 +1269,154 @@ def reactivate_staff(user_id):
     target = 'admin.students' if user.role == 'student' else ('admin.interns' if user.role == 'intern' else 'admin.employees')
     return redirect(url_for(target))
 
+@admin_bp.route('/overtime-requests')
+@login_required
+@admin_required
+def overtime_requests():
+    status_filter = request.args.get('status', '')
+    query = OvertimeRequest.query
+    
+    if status_filter:
+        query = query.filter_by(status=status_filter)
+    
+    overtime_requests = query.order_by(OvertimeRequest.applied_on.desc()).all()
+    return render_template('admin/overtime_requests.html', overtime_requests=overtime_requests, status_filter=status_filter)
 
+@admin_bp.route('/overtime/approve/<int:request_id>', methods=['POST'])
+@login_required
+@admin_required
+def approve_overtime(request_id):
+    from database.models import OvertimeRequest
+    ot_request = OvertimeRequest.query.get_or_404(request_id)
+    
+    if ot_request.status != 'pending':
+        flash('This request has already been processed.', 'warning')
+        return redirect(url_for('admin.overtime_requests'))
+    
+    ot_request.status = 'approved'
+    ot_request.approved_by = current_user.id
+    ot_request.approved_at = get_nepal_time()
+    
+    if ot_request.overtime_type == 'remote':
+        user = ot_request.user
+        login_time = get_nepal_time()
+        bypass_end = login_time + timedelta(hours=ot_request.hours)
+        user.overtime_bypass_until = bypass_end
+        
+        notice = Notice(
+            title="Overtime Request Approved - Location Bypass Activated",
+            content=f"Your remote overtime request for {ot_request.hours} hours has been approved. Location bypass is active from {login_time.strftime('%H:%M %d %b')} until {bypass_end.strftime('%H:%M %d %b')}.",
+            target_user_id=user.id,
+            is_active=True,
+            notice_type="System Alert"
+        )
+        db.session.add(notice)
+    
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Approved Overtime Request #{ot_request.id} for {ot_request.user.email}",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+    
+    flash(f'Overtime request approved for {ot_request.user.email}.', 'success')
+    return redirect(url_for('admin.overtime_requests'))
+
+@admin_bp.route('/overtime/reject/<int:request_id>', methods=['POST'])
+@login_required
+@admin_required
+def reject_overtime(request_id):
+    from database.models import OvertimeRequest
+    ot_request = OvertimeRequest.query.get_or_404(request_id)
+    
+    if ot_request.status != 'pending':
+        flash('This request has already been processed.', 'warning')
+        return redirect(url_for('admin.overtime_requests'))
+    
+    ot_request.status = 'rejected'
+    ot_request.approved_by = current_user.id
+    ot_request.approved_at = get_nepal_time()
+    
+    user = ot_request.user
+    notice = Notice(
+        title="Overtime Request Rejected",
+        content=f"Your overtime request for {ot_request.hours} hours on {ot_request.requested_date.strftime('%d %b %Y')} has been rejected by admin.",
+        target_user_id=user.id,
+        is_active=True,
+        notice_type="System Alert"
+    )
+    db.session.add(notice)
+    
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Rejected Overtime Request #{ot_request.id} for {ot_request.user.email}",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+    
+    flash(f'Overtime request rejected for {ot_request.user.email}.', 'success')
+    return redirect(url_for('admin.overtime_requests'))
+
+@admin_bp.route('/grant-location-bypass', methods=['POST'])
+@login_required
+@admin_required
+def grant_location_bypass():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    hours = float(data.get('hours', 24))
+    
+    user = User.query.get_or_404(user_id)
+    
+    if hours == -1:
+        user.location_bypass_until = datetime(2099, 12, 31, 23, 59, 59)
+        bypass_text = "until manually revoked"
+    else:
+        user.location_bypass_until = get_nepal_time() + timedelta(hours=hours)
+        bypass_text = user.location_bypass_until.strftime('%H:%M %d %b')
+    
+    notice = Notice(
+        title="Location Bypass Granted",
+        content=f"Admin has granted you a location bypass. You can now check in from any location {bypass_text}.",
+        target_user_id=user.id,
+        is_active=True,
+        notice_type="System Alert"
+    )
+    db.session.add(notice)
+    
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Granted Location Bypass ({hours}h) to {user.email}" if hours != -1 else f"Granted Unlimited Location Bypass to {user.email}",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'Location bypass granted to {user.email} ({hours}h)' if hours != -1 else 'Location bypass granted to ' + user.email})
+
+
+@admin_bp.route('/revoke-location-bypass', methods=['POST'])
+@login_required
+@admin_required
+def revoke_location_bypass():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    user = User.query.get_or_404(user_id)
+    user.location_bypass_until = None
+
+    notice = Notice(
+        title="Location Bypass Revoked",
+        content="Admin has revoked your location bypass. Location verification is now required again during login.",
+        target_user_id=user.id,
+        is_active=True,
+        notice_type="System Alert"
+    )
+    db.session.add(notice)
+
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action=f"Revoked Location Bypass for {user.email}",
+        ip_address=request.remote_addr
+    ))
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': f'Location bypass revoked for {user.email}'})

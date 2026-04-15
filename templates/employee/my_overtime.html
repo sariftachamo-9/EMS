@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-10 space-y-10 relative">
+    
+    <!-- Background element -->
+    <div class="absolute top-10 right-40 w-96 h-96 bg-indigo-200 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-pulse-soft z-0"></div>
+
+    <!-- Header & Stats -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10 mb-12">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-violet-500 to-indigo-500 tracking-tight pb-2">Overtime Requests</h1>
+            <p class="text-slate-500 font-medium text-lg mt-2">Request overtime work - remote or onsite.</p>
+        </div>
+        
+        <div class="relative glass-card rounded-[2rem] p-6 pr-10 flex items-center space-x-6 shrink-0 shadow-2xl shadow-indigo-500/10 overflow-hidden border border-white/80 bg-white/40">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-gradient-to-br from-indigo-200 to-violet-100 rounded-full opacity-50 blur-xl"></div>
+            <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-inner relative z-10 shadow-lg shadow-indigo-500/40">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            <div class="relative z-10">
+                <p class="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em] mb-1">Note</p>
+                <p class="text-sm font-bold text-slate-700 max-w-[200px]">Remote overtime grants location bypass from login time.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-10 relative z-10">
+        
+        <!-- Overtime Request Form -->
+        <div class="xl:col-span-4">
+            <div class="glass-card rounded-[2.5rem] p-8 shadow-2xl shadow-slate-200/50 sticky top-24 border border-white/80 bg-white/40">
+                <div class="flex items-center mb-8">
+                    <div class="w-2 h-8 rounded-full bg-gradient-to-b from-indigo-500 to-violet-400 mr-4"></div>
+                    <h3 class="text-xl font-black text-slate-900">Request Overtime</h3>
+                </div>
+
+                <form method="POST" class="space-y-6">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Overtime Type</label>
+                        <div class="relative">
+                            <select name="overtime_type" required class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none cursor-pointer">
+                                <option value="remote">Remote Overtime</option>
+                                <option value="onsite">Onsite Overtime</option>
+                            </select>
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 font-medium pl-1">Remote overtime grants location bypass from your login time.</p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Hours</label>
+                        <div class="relative">
+                            <input type="number" name="hours" min="0.5" max="12" step="0.5" required class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" placeholder="Enter hours (0.5-12)">
+                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-400">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Date</label>
+                        <input type="date" name="requested_date" required class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-4 py-3.5 text-sm font-bold text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all text-center">
+                    </div>
+
+                    <div class="space-y-1.5 pb-2">
+                        <label class="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Reason</label>
+                        <textarea name="reason" rows="3" placeholder="Please provide details..."
+                            class="w-full bg-slate-50/80 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-medium text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none placeholder-slate-400"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full group relative bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-black py-4 rounded-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-xl shadow-lg shadow-indigo-500/20 text-xs uppercase tracking-[0.2em] overflow-hidden">
+                        <span class="relative z-10 flex items-center justify-center">
+                            Submit Request
+                            <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        </span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Overtime History Table -->
+        <div class="xl:col-span-8 border border-white/80 rounded-[2.5rem] bg-white/40 glass-card shadow-2xl shadow-slate-200/50 flex flex-col h-full overflow-hidden">
+            <div class="px-8 py-6 border-b border-slate-200/50 flex items-center justify-between">
+                <h3 class="text-lg font-black text-slate-800">Request History</h3>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-600 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100">{{ overtime_requests|length }} Requests</span>
+            </div>
+            
+            <div class="overflow-x-auto flex-grow p-2 sm:p-4">
+                {% if overtime_requests|length == 0 %}
+                <div class="flex flex-col items-center justify-center h-64 text-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <p class="text-slate-500 font-bold">No overtime requests found.</p>
+                </div>
+                {% else %}
+                <table class="w-full text-left border-collapse min-w-[600px]">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200/50 w-2/5">Details</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200/50">Duration</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200/50 text-right">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100/80">
+                        {% for ot in overtime_requests %}
+                        <tr class="group hover:bg-white/50 transition-colors">
+                            <td class="px-6 py-5">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-12 h-12 rounded-[1rem] flex items-center justify-center flex-shrink-0 shadow-sm border
+                                        {% if ot.overtime_type == 'remote' %}bg-indigo-50 text-indigo-500 border-indigo-100
+                                        {% else %}bg-amber-50 text-amber-500 border-amber-100{% endif %} group-hover:scale-105 transition-transform">
+                                        {% if ot.overtime_type == 'remote' %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                                        {% else %}
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-black text-slate-800 capitalize">{{ ot.overtime_type }} Overtime</p>
+                                        <p class="text-[11px] text-slate-400 font-semibold mt-0.5 truncate max-w-[200px]">{{ ot.reason or 'No reason provided' }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5">
+                                <div class="flex flex-col">
+                                    <p class="text-sm font-bold text-slate-700 bg-slate-50 inline-block px-3 py-1.5 rounded-xl border border-slate-100">
+                                        {{ ot.hours }} Hours
+                                    </p>
+                                    <p class="text-[11px] text-slate-400 font-semibold mt-1">
+                                        {{ ot.requested_date.strftime('%b %d, %Y') }}
+                                    </p>
+                                </div>
+                            </td>
+                            <td class="px-6 py-5 text-right">
+                                <span class="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.15em] shadow-sm inline-flex items-center
+                                    {% if ot.status == 'approved' %}bg-emerald-50 text-emerald-600 border border-emerald-100
+                                    {% elif ot.status == 'rejected' %}bg-rose-50 text-rose-600 border border-rose-100
+                                    {% else %}bg-amber-50 text-amber-600 border border-amber-100{% endif %}">
+                                    {% if ot.status == 'approved' %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+                                    {% elif ot.status == 'rejected' %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mr-2"></span>
+                                    {% else %}
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2"></span>
+                                    {% endif %}
+                                    {{ ot.status }}
+                                </span>
+                                <p class="text-[9px] font-bold uppercase text-slate-400 mt-2 tracking-widest">Applied: {{ ot.applied_on.strftime('%b %d') }}</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

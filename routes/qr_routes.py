@@ -77,9 +77,14 @@ def check_bypass_status():
     if user.role == 'admin' and portal_role == 'admin':
         return jsonify({'has_bypass': True, 'reason': 'admin'})
         
-    # Check for temporary bypass
-    if user.location_bypass_until and user.location_bypass_until > get_nepal_time():
-        return jsonify({'has_bypass': True, 'reason': 'temporary'})
+    # Check for temporary bypass (valid only if set, not if None)
+    if user.location_bypass_until is not None:
+        if user.location_bypass_until > get_nepal_time():
+            return jsonify({'has_bypass': True, 'reason': 'temporary'})
+    
+    # Check for overtime-based bypass
+    if user.overtime_bypass_until and user.overtime_bypass_until > get_nepal_time():
+        return jsonify({'has_bypass': True, 'reason': 'overtime'})
         
     return jsonify({'has_bypass': False})
 
@@ -292,12 +297,14 @@ def qr_login_api():
     settings = OfficeSettings.query.first()
     office_ip = settings.office_ip if settings and settings.office_ip else current_app.config.get('OFFICE_PUBLIC_IP', '')
     
-    # Check for Bypasses first (Office IP or Admin Grant)
+    # Check for Bypasses first (Office IP, Admin Grant, or Overtime)
     has_bypass = False
     
     if office_ip and request.remote_addr == office_ip:
         has_bypass = True
-    elif user.location_bypass_until and user.location_bypass_until > get_nepal_time():
+    elif user.location_bypass_until is not None and user.location_bypass_until > get_nepal_time():
+        has_bypass = True
+    elif user.overtime_bypass_until and user.overtime_bypass_until > get_nepal_time():
         has_bypass = True
         
     if not has_bypass:
